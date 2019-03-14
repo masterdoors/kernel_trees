@@ -48,10 +48,12 @@ from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 
 from sklearn.linear_model import SGDClassifier
+#from memory_profiler import profile
 
 #import linearSVM
 
 from numpy import isnan
+from scipy.sparse.csc import csc_matrix
   
 class DecisionStamp:
     
@@ -338,6 +340,7 @@ class DecisionStamp:
         return mat  
     
 
+    #@profile
     def convexConcaveOptimization(self,x,Y,sample_weight):
 
         random.seed()
@@ -362,46 +365,60 @@ class DecisionStamp:
                     Y_tmp = Y_
             
             def nu(arr):
-                return unique(arr,return_counts=True)[1].shape[0]
-
-            counts = apply_along_axis(nu,axis=0,arr=asarray(x_tmp.todense()))
+                return asarray([1 + unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
+            
+            #nonzero_idxs = unique(x_tmp.nonzero()[1]) 
+            counts = nu(csc_matrix(x_tmp))
             pos_idx = where(counts > 1)[0]
 
             fw_size = int(x_tmp.shape[1] * self.feature_ratio)
             if fw_size > pos_idx.shape[0]:
-               fw_size = pos_idx.shape[0]
+                fw_size = pos_idx.shape[0]
             #fw_size = int(pos_idx.shape[0] * self.feature_ratio)
 
             self.features_weight = random.permutation(pos_idx)[:fw_size]
 
             x_tmp = csr_matrix(x_tmp[:,self.features_weight])
 
-            #Generate random H
-            H = 2*random.randint(2,size=(1,Y_tmp.shape[0])) - 1        
+            H = zeros(shape = (1,Y_tmp.shape[0]))        
             
             gini_res = 0    
     
-            while True:
-                #reestimate H
-                H_k = deepcopy(H)   
-                Hsize, IH,IY, gini_old_wise = self.getDeltaParams(H,Y_tmp)
-                
-                for i in range(x_tmp.shape[0]):
-                    #find h_i
-                    gini_new_wise = self.delta_wise(Hsize, IH,IY,Y_tmp[i],-H[0,i])
+            class_counts = unique(Y_tmp, return_counts=True)
+            class_counts = zip(class_counts[0],class_counts[1])
 
-                    if  gini_old_wise > gini_new_wise:
-                        H[0,i] = -H[0,i]
+            class2side = {}
+            class2count = {}
+            side2count = {}
 
-                        IY[H[0,i]][Y_tmp[i]] += 1
-                        IY[-H[0,i]][Y_tmp[i]] -= 1
-                        
-                        IH[H[0,i]] += 1
-                        IH[-H[0,i]] -= 1
-                        gini_old_wise = gini_new_wise
-                        
-                if linalg.norm(H - H_k) < 0.1:
-                    break        
+            for class_id, count_ in class_counts:
+                left_side_prob = (count_ + side2count.get(-1,0)) / (count_ + side2count.get(-1,0) + side2count.get(1,0))
+                right_side_prob =   (count_ + side2count.get(1,0)) / (count_ + side2count.get(-1,0) + side2count.get(1,0))
+
+                left_count = side2count.get(-1,0) + count_ 
+                right_count = side2count.get(1,0) + count_ 
+
+                gini_l = 0
+                gini_r = 0
+
+                for class_ in class2side:
+                    if class2side[class_] > 0:
+                        gini_l += (class2count[class_] / left_count) * (1 - class2count[class_] / left_count)
+                    else:
+                        gini_r += (class2count[class_] / right_count) * (1 - class2count[class_] / right_count)
+
+                gini_l += (count_   / left_count) * (1 - count_ / left_count)  
+                gini_r += (count_   / right_count) * (1 - count_ / right_count)  
+                class2count[class_id] = count_
+
+                if left_side_prob * gini_l > right_side_prob * gini_r:
+                    class2side[class_id] = 1
+                    side2count[1] = right_count
+                    H[0,Y_tmp == class_id] = 1   
+                else:
+                    class2side[class_id] =  -1
+                    side2count[-1] = left_count      
+                    H[0,Y_tmp == class_id] = -1   
 
             Hsize, IH,IY, gini_old_wise = self.getDeltaParams(H,Y_tmp)
                 

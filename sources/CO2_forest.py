@@ -89,8 +89,8 @@ class CO2_forest:
 
         return multiply(asarray(res).sum(axis=0), 1. / self.n_estimators)
         
-    def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.005, min_samples_split = 2, \
-                 dual=True,max_iter=1000,
+    def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
+                 dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.):
         self.C = C
         self.min_samples_split = min_samples_split

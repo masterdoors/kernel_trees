@@ -142,7 +142,7 @@ class CO2Tree:
                 
                 self.structure = []
  
-                self.total_len = self.buildTree(self.tol, self.C,x, Y, self.structure, sample_weight, features_weight, 0)
+                self.total_len = self.buildTree(self.tol, self.C,x, Y, self.structure, sample_weight, features_weight, 1)
                 
                 #print "Tree ready: ", self.seed
                  
