@@ -13,7 +13,7 @@ from sklearn.preprocessing import LabelEncoder
 import math
 from scipy import sparse
 from sklearn.preprocessing import normalize
-from sklearn.preprocessing import Imputer
+from sklearn.impute import SimpleImputer
 import CO2_tree as co2t
 import CO2_forest as co2f
 from numpy import random
@@ -56,9 +56,9 @@ def test():
 
     print (x.shape) 
     tree_deth = [3]
-    sratios = [3.0]
-    fratios = [0.1,0.11]    
-    C = [5000,10000,15000]
+    sratios = [0.0]
+    fratios = [0.2]    
+    C = [500]
    
     #tree_deth = [5]
     #sratios = [0.5]
@@ -75,26 +75,33 @@ def test():
                     for train, test in kf.split(x):
                         
                         print ("Test carbon forest with tree deth= ", d+1, " C= ", c, " s ratio ", sratio," f ratio ",fratio," gamma=",1)            
-                        #trc = co2t.CO2Tree(C=c, tol = 0.00001,max_iter=300000,kernel='linear',seed = randint(1, 100), max_deth=d,gamma=1)
-                        trc = co2f.CO2_forest(C=c, dual=False,tol = 0.00001,max_iter=5000000,kernel='linear',max_deth=d,n_jobs=10,sample_ratio=sratio, feature_ratio = fratio,n_estimators=10,gamma=1)        
+                        #trc = co2t.CO2Tree(C=c, tol = 0.0001,max_iter=5000000,kernel='linear',seed = randint(1, 100), feature_ratio = fratio, max_deth=d,gamma=1,dual=False)
+                        trc = co2f.CO2_forest(C=c, dual=False,tol = 0.0000001,max_iter=10000,kernel='linear',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = fratio,n_estimators=10,gamma=1,dropout=sratio,noise=0.0)        
                         
                         trc.fit(sparse.csr_matrix(x[train]), y[train])
+
+                        #weights = numpy.asarray(trc.stat()).flatten()
+
+                        #print ("W:", numpy.histogram(weights,10,density=True))          
         
-                        Y_t = trc.predict_proba(sparse.csr_matrix(x[train]))
+                        Y_t = trc.predict_proba(sparse.csr_matrix(x[train]),macro=True)
         
-                        Y_v = trc.predict_proba(sparse.csr_matrix(x[test]))
-                        
+                        Y_v = trc.predict_proba(sparse.csr_matrix(x[test]),macro=True)
+
                         try: 
                             t_sc.append(log_loss(y[train],Y_t[:,1:]))
                             v_sc.append(log_loss(y[test],Y_v[:,1:]))                    
+                            print (t_sc,v_sc)
                         except:
                             pass
-    
+                       
     
                     t_sc = numpy.asarray(t_sc)
                     v_sc = numpy.asarray(v_sc)
                     print ("Train log loss: ", t_sc.mean())
                     print ("Test log loss:", v_sc.mean())   
+
+                     
                                   
                     if v_sc.mean() <  best_v_acc:
                         best_v_acc = v_sc.mean()                
