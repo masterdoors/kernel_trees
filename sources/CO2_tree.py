@@ -176,7 +176,7 @@ class CO2Tree:
                     if s[0] == -1 or s[1] == -1:
                         self.leaves.append(i) 
                 
-                #print "Tree ready: ", self.seed
+                print ("Tree ready")
                  
             else:
                 print ("Wrong training set dimensionality")  

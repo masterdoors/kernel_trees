@@ -94,6 +94,20 @@ def weighter(tree,forest,norm,diff,min_nom,uniform):
 class CO2_forest:
     def stat(self):
         return Parallel(n_jobs=self.n_jobs)(delayed(statter)(t) for t in self.trees)
+    
+    def sequential_fit(self,x,Y):
+        self.trees = []
+        forest = self
+        for i in range(self.n_estimators):
+            tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
+            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+            min_samples_split = forest.min_samples_split,dual=forest.dual,\
+            min_samples_leaf = forest.min_samples_leaf, seed = None,\
+            sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
+            gamma=forest.gamma,intercept_scaling=forest.intercept_scaling,dropout_low=forest.dropout_low,dropout_high=forest.dropout_high,noise=forest.noise,cov_dr=forest.cov_dr, criteria = forest.criteria)
+
+            tree.fit(x,Y, preprocess = False)
+            self.trees.append(tree)
 
     #@profile
     def fit(self,x,Y):
@@ -163,6 +177,16 @@ class CO2_forest:
                         global_counter += 1
             #self.trees = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed( weighter)(i,self,norm, diff,min_nom,uniform)for i in range(self.n_estimators))
 
+    def sequential_predict(self,x,use_weight=True):
+        probas = []
+        for tree in self.trees:
+            probas.append(tree.predict_proba(x,None,preprocess = False,stat_only=False,use_weight=use_weight)) 
+
+        proba =  multiply(asarray(probas).sum(axis=0), 1. / self.n_estimators)
+        res =  argmax(proba, axis = 1)
+        zr = res == 0
+        res[zr] = 1
+        return res   
 
     def predict(self,x,Y=None,use_weight=True):
         if Y is not None:

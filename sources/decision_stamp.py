@@ -50,9 +50,8 @@ from sklearn.linear_model import SGDClassifier
 #from SVM import SVM, polynomial_kernel, gaussian_kernel
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
-from sklearn.svm import SVC
+#from sklearn.svm import SVC
 
-from sklearn.linear_model import SGDClassifier
 
 import numpy
 from sympy.utilities.iterables import multiset_permutations
@@ -62,7 +61,7 @@ from numpy import isnan
 from scipy.sparse.csc import csc_matrix
 
 from sklearn.metrics import accuracy_score
-
+from thundersvm import *
 
 class DecisionStamp:
     
@@ -119,6 +118,15 @@ class DecisionStamp:
             pj += eps
         return - pj*numpy.log(pj)       
     
+    def criteriaGinirow(self,pj):
+        return (pj*(1 - pj)).sum()
+    
+    def criteriaIGrow(self,pj):
+        eps = 0.0000001
+        pj[pj == 0] = eps
+        return (- pj*numpy.log(pj)).sum()  
+
+
     def getDeltaParams(self,H,Y,criteria):
         res = 0
         IH = {}
@@ -361,7 +369,6 @@ class DecisionStamp:
     
 
     def convexConcaveOptimization(self,x,Y,sample_weight,samp_counts):
-
         random.seed()
         self.counts = samp_counts
         if x.shape[0] > 0:
@@ -428,31 +435,70 @@ class DecisionStamp:
             min_gini = self.max_criteria
             min_p = []
             
-            for zc in range(1,len(class_counts),1):
-                a = numpy.hstack([-numpy.ones((zc,)),numpy.ones((len(class_counts) - zc,))])
-                for p in multiset_permutations(a):
-                    p = numpy.asarray(p)
-                    left_counts = numpy.asarray([c[1] for c in class_counts[p < 0]])
-                    right_counts = numpy.asarray([c[1] for c in class_counts[p > 0]])
-                    
-                    PL = float(left_counts.sum())/(left_counts.sum() + right_counts.sum())
-                    PR = float(right_counts.sum())/(left_counts.sum() + right_counts.sum())
+            if len(class_counts) > 13:
+            #Greedy
+                for _ in range(len(class_counts)*len(class_counts)*15):
+                    lmin_gini = self.max_criteria
+                    lmin_p = []
+
+                    next = True
+                    elements = [-1,+1]
+                    probabilities = [0.5, 0.5]
+                    p = numpy.random.choice(elements,len(class_counts) , p=probabilities)
+
+                    zc = 0 
+                    while next:
+                        next = False
+                        zc += 1  
+                        for i in range(p.shape[0]):
+                            p[i] = - p[i]
+                            left_counts = class_counts[p < 0, 1]
+                            right_counts = class_counts[p > 0, 1]
+
+                            lcs = left_counts.sum()
+                            rcs = right_counts.sum()  
+                            den = lcs + rcs 
+
+                            PL = float(lcs)/ den
+                            PR = float(rcs)/ den
             
-                    gini_l = 0.
-                    for c in left_counts:
-                        pj = float(c)/left_counts.sum()                        
-                        gini_l += self.criteria(pj)    
-                        
-                    gini_r = 0.    
-                    for c in right_counts:
-                        pj = float(c)/right_counts.sum()
-                        gini_r += self.criteria(pj)    
-                        
-                    gini =  PL*gini_l + PR* gini_r
-                    
-                    if gini < min_gini:
-                        min_p = p
-                        min_gini = gini
+                            gini_l = self.criteria_row(left_counts / lcs)
+                            gini_r = self.criteria_row(right_counts / rcs)
+
+                            gini =  PL*gini_l + PR* gini_r
+                            if gini < lmin_gini:
+                                lmin_p = deepcopy(p)
+                                lmin_gini = gini
+                                next = True
+                        p = lmin_p
+
+                    if  lmin_gini < min_gini:
+                        min_p = deepcopy(lmin_p)
+                        min_gini = lmin_gini
+ 
+            else:
+                for zc in range(1,len(class_counts),1):
+                    a = numpy.hstack([-numpy.ones((zc,)),numpy.ones((len(class_counts) - zc,))])
+                    for p in multiset_permutations(a):
+                        p = numpy.asarray(p)
+                        left_counts = class_counts[p < 0, 1]
+                        right_counts = class_counts[p > 0, 1]
+
+                        lcs = left_counts.sum()
+                        rcs = right_counts.sum()  
+                        den = lcs + rcs 
+
+                        PL = float(lcs)/ den
+                        PR = float(rcs)/ den
+            
+                        gini_l = self.criteria_row(left_counts / lcs)
+                        gini_r = self.criteria_row(right_counts / rcs)
+
+                        gini =  PL*gini_l + PR* gini_r
+
+                        if gini < min_gini:
+                            min_p = p
+                            min_gini = gini
 
             left_counts = numpy.asarray([c[1] for c in class_counts[min_p < 0]])
             right_counts = numpy.asarray([c[1] for c in class_counts[min_p > 0]])
@@ -503,12 +549,18 @@ class DecisionStamp:
                 #x_maxis = asarray(abs(x_tmp).max(axis=0).todense()).flatten()
                 gauss_noise = random.normal(ones((x_tmp.shape[1],),dtype=float),self.noise,(1,x_tmp.shape[1]))
                 x_tmp = csr_matrix(x_tmp.multiply(gauss_noise),dtype=np.float32)
- 
+
+            #numpy.save("x_tmp",numpy.asarray(x_tmp.todense()))
+            #numpy.save("H",H.reshape(-1))
+            #numpy.save("deltas",deltas)
+            #time.sleep(10.0)
+            #return
+
             try:
                 if self.kernel == 'linear':
                     if not self.dual:
-                        #self.model = SGDClassifier(n_iter_no_change=5, average=True,loss='squared_hinge', penalty='l2', alpha=1. / (H.shape[1]*self.C), l1_ratio=0., fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=1.,shuffle=True, learning_rate='adaptive', class_weight='balanced')
-                        self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
+                        self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
+                        #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                         self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                     else:  
                         self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
@@ -517,18 +569,18 @@ class DecisionStamp:
                 else:
                     if self.kernel == 'polynomial':
                         self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                        self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
                     else:
                         if self.kernel == 'gaussian':
-                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter)
-                            self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
+                            self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
             except:
                 return 0.            
                         #print(1,unique(H),unique(Y_tmp,return_counts = True),accuracy_score(self.model.predict(x_tmp),H.reshape(-1)))
 
             #end_time = time.time()
 
-            #print ("Training time: ", end_time - start_time,"div:",side2count,"delta_uniques:",unique(deltas)) 
+            #print ("Fit 1") #, end_time - start_time,"div:",side2count,"delta_uniques:",unique(deltas)) 
 
             if self.dropout_low > 0 or self.dropout_high < 1.:
                 coeffs = np.abs(self.model.coef_).flatten()
@@ -554,8 +606,8 @@ class DecisionStamp:
 
                 if self.kernel == 'linear':
                     if not self.dual:
-                        #self.model = SGDClassifier(loss='squared_hinge', penalty='l2', alpha=1 / (self.C * self.C), l1_ratio=0., fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.1,shuffle=True, learning_rate='adaptive', class_weight='balanced')
-                        self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
+                        self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
+                        #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                         self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                         #coef_tmp = self.model.coef_[0,remain_idxs].reshape(1,-1)
                         #self.model.coef_ = coef_tmp 
@@ -566,13 +618,13 @@ class DecisionStamp:
                 else:
                     if self.kernel == 'polynomial':
                         self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                        self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
                     else:
                         if self.kernel == 'gaussian':
-                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter)
-                            self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
+                            self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
 
-
+            #print ("Fit 2")
             gini_res = self.calcGini(x,Y)
             
             #print (gini_res,"|",gini_best)
@@ -610,9 +662,11 @@ class DecisionStamp:
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,max_iter=1000,gamma=1000.,intercept_scaling=1.,dropout_low=0.1, dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini"):
         if criteria == "gain":
             self.criteria = self.criteriaIG
+            self.criteria_row = self.criteriaIGrow
             self.max_criteria = 1e32
         else:
             self.criteria = self.criteriaGini 
+            self.criteria_row = self.criteriaGinirow
             self.max_criteria = 1.0       
         
         self.tol = tol
