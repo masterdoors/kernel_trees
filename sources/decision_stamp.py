@@ -556,7 +556,7 @@ class DecisionStamp:
             #time.sleep(10.0)
             #return
             best_gamma = 10.
-
+            best_C = 10.
             try:
                 if self.kernel == 'linear':
                     if not self.dual:
@@ -575,17 +575,19 @@ class DecisionStamp:
                         if self.kernel == 'gaussian':
                             best_score = 0.
                             tmp_models = {} 
-                            for gamma_ in [10, 100, 1000]:
-                                gmodel = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=gamma_)
-                                gmodel.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-                                tmp_models[gamma_] = gmodel
-                                h_pred = gmodel.predict(x_tmp)
-                                score = accuracy_score(H.reshape(-1),h_pred)
-                                if score > best_score:
-                                    best_gamma = gamma_
-                                    best_score = score  
-                            self.model = tmp_models[best_gamma] 
-                            print (best_gamma)
+                            for tC in [100,500,1000,2000,3000]:
+                                for gamma_ in [1, 10, 100, 1000, 2000]:
+                                    gmodel = SVC(kernel='rbf',tol=self.tol,C = tC,max_iter=self.max_iter,gamma=gamma_)
+                                    gmodel.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
+                                    tmp_models[str(gamma_) + "_" + str(tC)] = gmodel
+                                    h_pred = gmodel.predict(x_tmp)
+                                    score = accuracy_score(H.reshape(-1),h_pred)
+                                    if score > best_score:
+                                        best_gamma = gamma_
+                                        best_score = score  
+                                        best_C = tC
+                            self.model = tmp_models[str(best_gamma) + "_" + str(best_C)] 
+                            print (best_gamma, best_C)
                             #self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
                             #self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
             except:
