@@ -578,7 +578,7 @@ class DecisionStamp:
                             for gamma_ in [10, 100, 1000]:
                                 gmodel = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=gamma_)
                                 gmodel.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-                                tmp_models[gamm_] = gmodel
+                                tmp_models[gamma_] = gmodel
                                 h_pred = gmodel.predict(x_tmp)
                                 score = accuracy_score(H.reshape(-1),h_pred)
                                 if score > best_score:
