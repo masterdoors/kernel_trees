@@ -555,6 +555,7 @@ class DecisionStamp:
             #numpy.save("deltas",deltas)
             #time.sleep(10.0)
             #return
+            best_gamma = 10.
 
             try:
                 if self.kernel == 'linear':
@@ -572,8 +573,21 @@ class DecisionStamp:
                         self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
                     else:
                         if self.kernel == 'gaussian':
-                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
-                            self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
+                            best_score = 0.
+                            tmp_models = {} 
+                            for gamma_ in [10, 100, 1000]:
+                                gmodel = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma_)
+                                gmodel.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
+                                tmp_models[gamm_] = gmodel
+                                h_pred = gmodel.predict(x_tmp)
+                                score = accuracy_score(H.reshape(-1),h_pred)
+                                if score > best_score:
+                                    best_gamma = gamma_
+                                    best_score = score  
+                            self.model = tmp_models[best_gamma] 
+                            print (best_gamma)
+                            #self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
+                            #self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
             except:
                 return 0.            
                         #print(1,unique(H),unique(Y_tmp,return_counts = True),accuracy_score(self.model.predict(x_tmp),H.reshape(-1)))
@@ -621,7 +635,7 @@ class DecisionStamp:
                         self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
                     else:
                         if self.kernel == 'gaussian':
-                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
+                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=best_gamma)
                             self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
 
             #print ("Fit 2")
