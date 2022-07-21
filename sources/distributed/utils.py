@@ -1,0 +1,166 @@
+import socket
+import pickle
+import os
+import subprocess
+import yaml
+import numpy
+import time
+import signal
+import uuid
+
+import requests
+import grequests
+from tempfile import TemporaryFile
+
+BUFFER_SIZE = 1024*32
+
+from scipy.sparse import csr_matrix
+
+def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
+    package = [] 
+    package.append(0)
+    package.append(cmd)
+    if cmd == 1 or cmd == 5:
+        package[0] = int(cmd).to_bytes(8,byteorder='little')
+    package[1] = int(cmd).to_bytes(1,byteorder='little') 
+    if cmd == 2 or cmd == 4:
+        if mask is not None:
+            package.append(int(id).to_bytes(8,byteorder='little',signed=True))
+            package.append(mask)
+            package[0]  = int(9 + len(mask)).to_bytes(8,byteorder='little')
+    if cmd == 3:
+        package.append(int(id).to_bytes(8,byteorder='little'))
+        package[0]  = int(9).to_bytes(8,byteorder='little')
+
+    cmd_str =  b''.join(package)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(addr)
+    sock.sendall(bytes(cmd_str))  
+    try:  
+        msg = sock.recv(BUFFER_SIZE)
+
+        data = b''
+
+        while msg:
+            data += msg
+            msg = sock.recv(BUFFER_SIZE)
+    except Exception as e:
+        print("Error while trying to read the command result. cmd: ",cmd,e)
+     
+    sock.close() 
+    return data  
+
+def loadClusterCfg(cfg_path):
+    with open(cfg_path) as file:
+        cfg = yaml.load(file, Loader=yaml.FullLoader)
+    return cfg    
+
+def readResultFile(res_name):
+    bufs = []
+    offs = 8
+    old_offs = 0
+    if os.path.exists(res_name):
+        with open(res_name,'rb') as f:
+            tree_arr = f.read()
+            while offs < len(tree_arr):  
+                size_ = int.from_bytes(bytes(tree_arr[old_offs:offs]),byteorder='little')
+                arr = bytes(tree_arr[offs :size_ + offs]) 
+                id_ = int.from_bytes(bytes(arr[:8]),byteorder='little',signed=True)   
+                parent_id = int.from_bytes(bytes(arr[8:16]),byteorder='little',signed=True)    
+                buf = arr[16:]
+                buf = pickle.loads(buf)
+                bufs.append((buf,id_,parent_id))
+                old_offs = offs + size_
+                offs = old_offs + 8     
+                
+    return bufs      
+
+def expandMatrix(x):
+        x = csr_matrix((x.data, x.indices, x.indptr),shape=(x.shape[0], x.shape[1] + 1), dtype = numpy.float32, copy=False)
+        tdat = [-1] * x.shape[0]
+        tcols = [x.shape[1] - 1] *  x.shape[0]
+        trows = range(x.shape[0])
+        
+        x_tmp = csr_matrix((tdat, (trows, tcols)),shape=x.shape,dtype = numpy.float32)
+        
+        x = x + x_tmp     
+        
+        return x
+    
+def prepareProblem(func):
+    
+    def run_client_cmd(fname, n_threads, docker_id):
+        return "docker exec -ti " + docker_id + " /bin/bash python client.py " + fname + ' --nproc ' + str(n_threads) 
+    
+    def data_checker(tree,x,Y,problem,clusterCfg, res_name,addr,preprocess=False,sample_weight=None):
+        if isinstance(x,csr_matrix) and isinstance(Y,numpy.ndarray):
+            if Y.shape[0] > 0 and x.shape[0] == Y.shape[0]:
+                
+                if preprocess:
+                    x = expandMatrix(x)
+                
+                classes_ = numpy.nonzero(numpy.bincount(Y))[0]
+                n_classes = len(classes_)
+                tree.class_max = Y.max()
+                
+                tree.class_map = numpy.zeros(shape = (tree.class_max + 1), dtype = numpy.int64)
+                tree.class_map_inv = numpy.zeros(shape = (n_classes), dtype = numpy.int64)
+                cc = 0
+                for c in classes_:
+                    tree.class_map[c] = cc
+                    tree.class_map_inv[cc] = c                   
+                    cc += 1 
+                
+                if sample_weight == None:
+                    sample_weight = numpy.ones(shape=(1,x.shape[0]),dtype = numpy.int8)
+                    
+                id_ = str(uuid.uuid4())
+                
+                #problem['features'] = "/data/" + id_ + "x.npy"
+                #problem['labels'] = "/data/" + id_ + "Y.npy"    
+                problem['class_map'] = tree.class_map.tolist()
+                problem['class_map_inv'] = tree.class_map_inv.tolist()
+                problem['n_classes'] = n_classes
+                problem['class_max'] = int(tree.class_max)                 
+                            
+                xfile_name = id_ + "_x.npy"
+                yfile_name = id_ + "_y.npy"
+                
+                numpy.save(xfile_name,Y)
+                numpy.save(yfile_name,numpy.asarray(x.todense())) 
+                
+
+                
+                try:     
+                    server_cmd = "./queue 5555 " + res_name
+                    p = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+                    print ("Run queue")                  
+                    
+                    rss = [] 
+                    for srv in clusterCfg['servers']:
+                        url = srv['host'] + ":" + str(srv['port']) + "/run_problem"
+                        for _ in range(srv['max_threads']):
+                            files = {'features': open(xfile_name,'rb'), 'labels': open(yfile_name,'rb')}
+                            values = {'problem':yaml.dump(problem),'id':id_}                            
+                            rss.append(grequests.post(url,files=files, data=values,timeout=9000))
+                    
+                    time.sleep(0.5)        
+                    func(tree,sample_weight,addr)        
+                    grequests.map(rss)
+                    p.wait()
+                    print ("Queue is stopped")
+                    
+                except Exception as e:
+                    print(e)
+                    
+                os.remove(xfile_name)
+                os.remove(yfile_name)    
+            else:
+                print ("Wrong training set dimensionality")  
+        else:
+            print ("X type must be scipy.sparse.csr_matrix and Y type must be numpy.ndarray") 
+    return data_checker       
+
+     
+
+    

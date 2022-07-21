@@ -1,0 +1,8 @@
+queue:
+    host: localhost
+    port: 5555
+servers:
+    - port: 8050
+      host: http://keen.isa.ru
+      max_threads: 16
+ 
