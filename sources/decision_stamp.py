@@ -1,5 +1,3 @@
-# coding: utf-8
-
 '''
 Created on 26 марта 2016 г.
 
@@ -10,6 +8,10 @@ from numpy import random
 from numpy import zeros
 from numpy import ones
 from numpy.random import randint
+import pickle
+import uuid
+import traceback
+import os
 
 from numpy import sign
 from numpy import transpose
@@ -50,8 +52,7 @@ from sklearn.linear_model import SGDClassifier
 #from SVM import SVM, polynomial_kernel, gaussian_kernel
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
-#from sklearn.svm import SVC
-
+from sklearn.svm import SVC
 
 import numpy
 from sympy.utilities.iterables import multiset_permutations
@@ -61,17 +62,21 @@ from numpy import isnan
 from scipy.sparse.csc import csc_matrix
 
 from sklearn.metrics import accuracy_score
-from thundersvm import *
+#from thundersvm import *
+import subprocess
+#from memory_profiler import profile
 
 class DecisionStamp:
     
-    def estimateTetas(self,x,Y):
+    def estimateTetas(self,x,Y,x_):
         counts = self.n_classes
 
         self.Teta0 = zeros((counts))
         self.Teta1 = zeros((counts))
 
-        signs = self.stamp_sign(x,sample = False)
+        signs = self.stamp_sign(x,x_,sample = False)
+        
+        #print(unique(signs, return_counts=True))
 
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
             signs = signs.todense()
@@ -206,8 +211,8 @@ class DecisionStamp:
         else:
             return 0.        
             
-    def calcGini(self,x,Y, report = False):
-        signs = self.stamp_sign(x)
+    def calcGini(self,x,Y,x_, report = False):
+        signs = self.stamp_sign(x,x_)
         
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
             signs = signs.todense()        
@@ -361,44 +366,48 @@ class DecisionStamp:
         mat.indices[b_idx] = a
         return mat.asformat(mat.format)                                      
 
-    def swap_rows_batch(self, mat, a, b) :
+    def swap_rows_batch(self, mat, a, b):
         buf = mat[a, :]
         mat[a, :] = mat[b, :]
         mat[b, :] = buf
         return mat  
     
-
+    #@profile
     def convexConcaveOptimization(self,x,Y,sample_weight,samp_counts):
-        random.seed()
-        self.counts = samp_counts
+        #random.seed()
+        self.counts = numpy.zeros((x.shape[0],))
         if x.shape[0] > 0:
-            
             sample_idx = sample_weight > 0
             sample_idx_ran = asarray(range(x.shape[0]))[sample_idx.reshape(-1)]
-            
-            
             Y_tmp = Y[sample_idx.reshape(-1)]
             x_tmp = csr_matrix(x[sample_idx.reshape(-1)],dtype=np.float32)
+            rng = random.default_rng(self.seed+int(x_tmp.sum()))
 
             #sample X and Y
             if self.sample_ratio*x.shape[0] > 10:
-                #idxs =  random.permutation(x_tmp.shape[0])[:int(x_tmp.shape[0]*self.sample_ratio)]            
-                idxs = randint(0, x_tmp.shape[0], int(x_tmp.shape[0]*self.sample_ratio)) #bootstrap
-                  
-                to_add_cnt = sample_idx_ran[idxs] 
+                #idxs =  random.permutation(x_tmp.shape[0])[:int(x_tmp.shape[0]*self.sample_ratio)]   
+                idxs = rng.integers(0, x_tmp.shape[0], int(x_tmp.shape[0]*self.sample_ratio)) #bootstrap
+                
+                to_add_cnt = numpy.unique(sample_idx_ran[idxs]) 
                 x_ = csr_matrix(x_tmp[idxs],dtype=np.float32)
                 Y_ = Y_tmp[idxs]
                     
                 diff_y = unique(Y_)
                 if diff_y.shape[0] > 1:
+                    orig_idxs = sample_idx_ran[idxs]
+                    self.sample_weight = orig_idxs #zeros(sample_weight.shape).astype(int8)
+                    #self.sample_weight[0, orig_idxs] = 1
                     x_tmp = x_
                     Y_tmp = Y_
                     #print ("sampling shape:",diff_y.shape[0])
+                else:
+                    self.sample_weight = sample_idx.flatten()    
             else:
                 to_add_cnt = sample_idx_ran
-
+                self.sample_weight = sample_idx.flatten()
+                
             if not (samp_counts is None): 
-                samp_counts[to_add_cnt] += 1
+                self.counts[to_add_cnt] += 1
             
             def nu(arr):
                 return asarray([1 + unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
@@ -406,14 +415,19 @@ class DecisionStamp:
             #nonzero_idxs = unique(x_tmp.nonzero()[1]) 
             counts_p = nu(csc_matrix(x_tmp))
             pos_idx = where(counts_p > 1)[0]
-
-            fw_size = int(x_tmp.shape[1] * self.feature_ratio)
-            if fw_size > pos_idx.shape[0]:
-                fw_size = pos_idx.shape[0]
-            #fw_size = int(pos_idx.shape[0] * self.feature_ratio)
-
-            self.features_weight = random.permutation(pos_idx)[:fw_size]
             
+            if self.features_weight is not None:
+                f_idx = where(self.features_weight > 0)[0]
+                pos_idx =list(set(pos_idx).intersection(set(f_idx)))
+                fw_size = int(self.features_weight[self.features_weight > 0].shape[0]* self.feature_ratio)
+            else:
+                fw_size = int(x_tmp.shape[1] * self.feature_ratio)
+                if fw_size > pos_idx.shape[0]:
+                    fw_size = pos_idx.shape[0]
+                #fw_size = int(pos_idx.shape[0] * self.feature_ratio)
+
+            self.features_weight = rng.permutation(pos_idx)[:fw_size]#.astype(int8)
+
             if fw_size == 0:
                 return 0.
 
@@ -555,8 +569,6 @@ class DecisionStamp:
             #numpy.save("deltas",deltas)
             #time.sleep(10.0)
             #return
-            best_gamma = 10.
-            best_C = 10.
             try:
                 if self.kernel == 'linear':
                     if not self.dual:
@@ -567,53 +579,76 @@ class DecisionStamp:
                         self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                         self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                     
+                #else:
+                if self.kernel == 'polynomial':
+                    self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma)
+                    #x_tmp
+                    self.model.fit(x,H.reshape(-1),feature_weight=self.features_weight,samples=self.sample_weight,sample_weight=deltas)
                 else:
-                    if self.kernel == 'polynomial':
-                        self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-                    else:
-                        if self.kernel == 'gaussian':
-                            best_score = 0.
-                            tmp_models = {} 
-                            for tC in [100,500,1000,2000,3000]:
-                                for gamma_ in [1, 10, 100, 1000, 2000]:
-                                    gmodel = SVC(kernel='rbf',tol=self.tol,C = tC,max_iter=self.max_iter,gamma=gamma_)
-                                    gmodel.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-                                    tmp_models[str(gamma_) + "_" + str(tC)] = gmodel
-                                    h_pred = gmodel.predict(x_tmp)
-                                    score = accuracy_score(H.reshape(-1),h_pred)
-                                    if score > best_score:
-                                        best_gamma = gamma_
-                                        best_score = score  
-                                        best_C = tC
-                            self.model = tmp_models[str(best_gamma) + "_" + str(best_C)] 
-                            print (best_gamma, best_C)
-                            #self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
-                            #self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-            except:
+                    if self.kernel == 'gaussian':
+                        #self.model = None
+                        #x_tmp
+                        print("x:", x.shape)
+                        self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
+                        self.model.fit(asarray(x.todense()),H.reshape(-1),feature_weight=self.features_weight,samples=self.sample_weight,sample_weight=deltas)                        
+                        
+                        #self.classifier_id = str(uuid.uuid4()) 
+                        #numpy.save("vertexDataXt" + self.classifier_id,x_tmp.data)
+                        #numpy.save("vertexIndXt" + self.classifier_id,x_tmp.indices)
+                        #numpy.save("vertexPtrXt" + self.classifier_id,x_tmp.indptr)
+                        #numpy.save("DataH" + self.classifier_id,H)                             
+                        #numpy.save("deltas" + self.classifier_id,deltas)
+
+                        #with open('shapet'+self.classifier_id+'.pickle', 'wb') as f:
+                        #    pickle.dump(x_tmp.shape, f)
+                            
+                        #if self.kernel == 'gaussian':
+                        #    kernel_ =  'rbf'     
+                        #else:
+                        #    kernel_ = 'linear'
+
+                        #p = subprocess.Popen("python train.py " + self.classifier_id + " " + kernel_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)                        
+                        #p.wait()
+                        #os.remove("DataH" + self.classifier_id + ".npy")
+                        #os.remove("vertexDataXt" + self.classifier_id + ".npy")
+                        #os.remove("vertexIndXt" + self.classifier_id + ".npy")
+                        #os.remove("vertexPtrXt" + self.classifier_id + ".npy")                            
+                        #os.remove("deltas" + self.classifier_id + ".npy")
+                        #os.remove('shapet'+self.classifier_id+'.pickle')      
+                        
+                        #if not os.path.exists(self.classifier_id + ".model"):
+                        #    return 0.
+                        
+                            
+            except Exception as exp:
+                print (str(exp))
+                print (x_tmp.shape)
+                print(H)
+                print(traceback.format_exc())
                 return 0.            
                         #print(1,unique(H),unique(Y_tmp,return_counts = True),accuracy_score(self.model.predict(x_tmp),H.reshape(-1)))
 
             #end_time = time.time()
 
             #print ("Fit 1") #, end_time - start_time,"div:",side2count,"delta_uniques:",unique(deltas)) 
+ 
 
             if self.dropout_low > 0 or self.dropout_high < 1.:
-                coeffs = np.abs(self.model.coef_).flatten()
+                #coeffs = np.abs(self.model.coef_).flatten()
                 
-                max_coeff = coeffs.max()
-                if max_coeff > 0:
-                    coeffs = coeffs / max_coeff
+                #max_coeff = coeffs.max()
+                #if max_coeff > 0:
+                #    coeffs = coeffs / max_coeff
                 
-                den = np.exp(self.dropout_low*coeffs)
-                p = den / den.sum()
-                remain_idxs = np.random.choice(len(coeffs), size=len(coeffs), replace=True, p=p)                
-                #max_coef = np.abs(self.model.coef_).max()
-                #remain_idxs = ((np.abs(self.model.coef_) >= max_coef * self.dropout_low) & (np.abs(self.model.coef_) <= max_coef * self.dropout_high)).flatten() 
+                #den = np.exp(self.dropout_low*coeffs)
+                #p = den / den.sum()
+                #remain_idxs = np.random.choice(len(coeffs), size=len(coeffs), replace=True, p=p)                
+                max_coef = np.abs(self.model.coef_).max()
+                remain_idxs = ((np.abs(self.model.coef_) >= max_coef * self.dropout_low) & (np.abs(self.model.coef_) <= max_coef * self.dropout_high)).flatten() 
             
                 #print ("old feat size: ", self.features_weight.shape[0])
-                if self.features_weight[remain_idxs].shape[0] < 1:
-                    remain_idxs = np.asarray([np.argmax(np.abs(self.model.coef_.flatten()), axis = 0)])  
+                #if self.features_weight[remain_idxs].shape[0] < 1:
+                #    remain_idxs = np.asarray([np.argmax(np.abs(self.model.coef_.flatten()), axis = 0)])  
                
             
                 self.features_weight = self.features_weight[remain_idxs]
@@ -634,18 +669,18 @@ class DecisionStamp:
                 else:
                     if self.kernel == 'polynomial':
                         self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
+                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                     else:
                         if self.kernel == 'gaussian':
-                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=best_gamma)
-                            self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
+                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
+                            self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
 
             #print ("Fit 2")
-            gini_res = self.calcGini(x,Y)
+            gini_res = self.calcGini(x,Y,x)
             
             #print (gini_res,"|",gini_best)
 
-            self.estimateTetas(x_tmp, Y_tmp) 
+            self.estimateTetas(x_tmp, Y_tmp,x) 
 
             self.p0 = zeros(shape=(self.class_max + 1))
             self.p1 = zeros(shape=(self.class_max + 1))
@@ -670,12 +705,14 @@ class DecisionStamp:
 
                 #exp_1 = exp(self.p1)
                 #self.p1 = exp_1 / exp_1.sum()
-
+            self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
             return gini_res    
 #public:
 
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
-                 sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,max_iter=1000,gamma=1000.,intercept_scaling=1.,dropout_low=0.1, dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini"):
+                 sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,max_iter=1000,gamma=1000.,intercept_scaling=1.,dropout_low=0.1, dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini",seed=None):
+        
+        coin = randint(0,2)
         if criteria == "gain":
             self.criteria = self.criteriaIG
             self.criteria_row = self.criteriaIGrow
@@ -688,7 +725,7 @@ class DecisionStamp:
         self.tol = tol
         self.n_classes = n_classes
         self.class_max = class_max
-        self.features_weight = deepcopy(features_weight)
+        #self.features_weight = deepcopy(features_weight)
         self.C = C
         self.gamma = gamma
         self.sample_ratio = sample_ratio
@@ -703,8 +740,12 @@ class DecisionStamp:
         self.noise = noise
         self.cov_dr = cov_dr 
         self.chunk_weight = 1.0 
+        self.leaf_id = -1
+        self.features_weight = deepcopy(features_weight)
+        if seed is not None:
+            self.seed = seed
     
-    def fit(self, x,Y, sample_weight,class_map,class_map_inv,counts):
+    def fit(self, x,Y, sample_weight,class_map,class_map_inv,counts, instability = 0):
         
         self.class_map = class_map
         self.class_map_inv = class_map_inv
@@ -714,56 +755,70 @@ class DecisionStamp:
         sample_weightL = zeros(shape=sample_weight.shape,dtype = int8)
         sample_weightR = zeros(shape=sample_weight.shape,dtype = int8)
         
+        self.prob = float(sample_weight.sum()) / sample_weight.shape[1]
+        self.instability = instability + 1./ self.prob
+
         if gres > 0:        
-            sign_matrix_full = self.stamp_sign(x)
+            sign_matrix_full = self.stamp_sign(x,x)
             sign_matrix = multiply(sample_weight.reshape(-1), sign_matrix_full)
             signs = asarray(sign_matrix)
             colsL = where(signs < 0.0)[0]
             colsR = where(signs > 0.0)[0]
             sample_weightL[0,colsL] = 1       
-            sample_weightR[0,colsR] = 1    
-        
+            sample_weightR[0,colsR] = 1  
+            self.probL = float(sample_weightL.sum()) / sample_weight.shape[1]
+            self.probR = float(sample_weightR.sum()) / sample_weight.shape[1]
+            print (sample_weightL.shape,sample_weightR.shape)
+        print ("pass 4")
         return gres, sample_weightL, sample_weightR        
     
-    def stamp_sign(self,x,sample = True):
+    def stamp_sign(self,x,x_,sample = True):
         if sample:
             x = x[:,self.features_weight]
-        return sign(self.model.predict(x))
-
-    def predict_stat(self,x,sample = True):
+        if self.kernel == "linear":    
+            return sign(self.model.predict(x))
+        else:
+            return sign(self.model.predict(asarray(x.todense()),asarray(x_[self.sample_weight][:,self.features_weight].astype(numpy.float64).todense())))
+            
+    
+    def predict_stat(self,x,x_,sample = True):
         res = zeros((x.shape[0],self.class_max + 1))
 
-        sgns = self.stamp_sign(x,sample)
+        sgns = self.stamp_sign(x,x_,sample)
 
         res[sgns < 0,1:] = self.Teta0
         res[sgns >=0,1:] = self.Teta1
 
         return res
 
-    def predict_proba(self,x,Y = None,sample = True, use_weight = True):
+    def predict_proba(self,x,Y = None,x_=None,sample = True, use_weight = True, get_id=False):
         res = zeros((x.shape[0],self.class_max + 1))
-
-        sgns = self.stamp_sign(x,sample)
+        leaf_ids =  zeros((x.shape[0],))
+        sgns = self.stamp_sign(x,x_,sample)
 
         #print("chunk weight orig: ",self.p0, self.p1)
         #print("chunk weight: ",self.p0*self.chunk_weight, self.p1*self.chunk_weight) 
         
         eps = 1e-6
         #self.cov_dr
+        #print ("Use weight:", self.chunk_weight, self.p0,self.p1)
         
         if use_weight and self.cov_dr > 0: 
-            res[sgns < 0] = self.p0*(self.chunk_weight + 1. / self.cov_dr)
-            res[sgns >=0] = self.p1*(self.chunk_weight + 1. / self.cov_dr)
+            res[sgns < 0] = self.p0*(self.chunk_weight)
+            res[sgns >=0] = self.p1*(self.chunk_weight)
         else:
             res[sgns < 0] = self.p0
             res[sgns >=0] = self.p1
 
-        
+        leaf_ids[sgns < 0] = self.leaf_id
+        leaf_ids[sgns >= 0] = self.leaf_id + 1          
         if Y is not None:
             cmp_res = []
             cmp = numpy.argmax(res,axis=1) == Y
             for c in cmp:
                 cmp_res.append([int(c),self.chunk_weight,self.counts])
             return res, cmp_res    
-        return res
-                            
+        if get_id:
+            return res, leaf_ids
+        else:    
+            return res

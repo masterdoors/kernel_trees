@@ -3,7 +3,7 @@ Created on 27 марта 2016 г.
 
 @author: keen
 '''
-import decision_stamp as dst
+import decision_stamp_reg as dst
 from scipy.sparse import csr_matrix
 from numpy import ndarray
 from numpy import float64
@@ -44,7 +44,7 @@ def expandMatrix(x):
         
         return x
 
-class CO2Tree:
+class CO2TreeReg:
     
     def clearNode(self,Y,sample_weight):
         y = asarray(multiply(sample_weight.reshape(-1),Y))
@@ -70,36 +70,18 @@ class CO2Tree:
         if  self.max_deth is None or deth <= self.max_deth: 
             if nnz >= self.min_samples_split: 
                 if not self.clearNode(Y, sample_weight):
-                    #print "deth:", deth
-                    #balanced = True
                     cf = 1
-                    #if deth > 6:
-                    #    cf = 10
-                    #if deth < 3:
-                    #    ds = dst.DecisionStamp(self.n_classes,self.class_max, features_weight,\
-                    #                           'linear', self.sample_ratio,self.feature_ratio,\
-                    #                           self.dual,C/cf,tol,self.max_iter,self.gamma,self.intercept_scaling,self.dropout_low,self.dropout_high,balanced,self.noise,self.cov_dr, self.criteria)
-                    #else: 
-                    
-                    #id_ = numpy.random.randint(0,3)
-                    #if id_ == 0:
-                    #    k = 'polynomial'
-                    #else:    
-                    #    if id_ == 1:
-                    #        k = 'linear'
-                    #    else:
-                    #        k = 'gaussian' 
                     if deth < 3:
                         sample_ratio = 0.2 * self.sample_ratio
                     else:
                         sample_ratio = self.sample_ratio
 
                     
-                    ds = dst.DecisionStamp(self.n_classes,self.class_max, features_weight,\
+                    ds = dst.DecisionStampReg(features_weight,\
                                            self.kernel, sample_ratio,self.feature_ratio,\
-                                           self.dual,C/cf,tol,self.max_iter,self.gamma,self.intercept_scaling,self.dropout_low,self.dropout_high,balanced,self.noise,self.cov_dr, self.criteria,seed=self.seed)
+                                           self.dual,C/cf,tol,self.max_iter,self.gamma,self.intercept_scaling,self.dropout_low,self.dropout_high,balanced,self.noise,self.cov_dr, self.criteria)
 
-                    gres,sample_weightL, sample_weightR = ds.fit(x, Y, sample_weight,self.class_map,self.class_map_inv,sam_counts,instability)
+                    gres,sample_weightL, sample_weightR = ds.fit(x, Y, sample_weight,sam_counts,instability)
                     #print ("R:",gres,sample_weightL.shape[0], sample_weightR.shape[0])
     
                     
@@ -119,7 +101,7 @@ class CO2Tree:
                         nnzR = count_nonzero(sample_weightR)
 
                         #print ("Balance: ",float(nnzL)/(nnzL + nnzR),float(nnzR)/(nnzL+nnzR),deth) 
-                        print ("pass 5")
+                        #print ("pass 5")
                         if nnzL > self.min_samples_leaf:      
                             #left
                             if not (sam_counts is None): 
@@ -158,38 +140,12 @@ class CO2Tree:
                     x = expandMatrix(x)
                 
                 self.n_features = x.shape[1]
-                classes_ = nonzero(bincount(Y))[0]
-                self.n_classes = len(classes_)
-                self.class_max = Y.max()
-                
-                self.class_map = zeros(shape = (self.class_max + 1), dtype = int64)
-                self.class_map_inv = zeros(shape = (self.n_classes), dtype = int64)
-                cc = 0
-                for c in classes_:
-                    self.class_map[c] = cc
-                    self.class_map_inv[cc] = c                   
-                    cc += 1 
                 
                 if sample_weight == None:
                     sample_weight = ones(shape=(1,x.shape[0]),dtype = int8)
                 self.nodes = []
 
-                #dataf = [1] * x.shape[1]
-                #colsf = range(x.shape[1])
-                #rowsf = [0] * x.shape[1]
-                #features_weight = csr_matrix((dataf,(rowsf,colsf)) ,shape=(1,x.shape[1]),dtype = int8)
-                if self.spatial_mul < 1.:
-                    features_weight = numpy.zeros((x.shape[1],))
-                    m = int(numpy.sqrt(x.shape[1]))
-                    rest = 1. - self.spatial_mul
-                    i = numpy.random.randint(0,int((1 - self.spatial_mul)*m))
-                    j = numpy.random.randint(0,int((1 - self.spatial_mul)*m))
-                    for i_ in range(i,i + int(self.spatial_mul*m)):
-                        for j_ in range(j,j + int(self.spatial_mul*m)):
-                            num = i_*(m-1) + j_
-                            features_weight[num] = 1
-                else:
-                    features_weight = None
+                features_weight = None
                 
                 self.structure = []
                 
@@ -221,15 +177,15 @@ class CO2Tree:
             print ("X type must be scipy.sparse.csr_matrix and Y type must be numpy.ndarray")          
 
     
-    def predict(self,x, x_, preprocess = False):
-        probs = self.predict_proba(x, x_=x_, preprocess=reprocess)
+    def predict(self,x, preprocess = False):
+        probs = self.predict_proba(x, preprocess = preprocess)
         
-        return argmax(probs,axis=1)
+        return probs
    
     
-    def predict_proba(self,x, Y = None,x_ = None,preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
+    def predict_proba(self,x, Y = None,preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
         if isinstance(x,csr_matrix):
-            res = zeros((x.shape[0], self.class_max + 1))
+            res = zeros((x.shape[0], 1))
             leaf_ids = zeros((x.shape[0],))
             
             if self.total_len > -1:
@@ -246,7 +202,7 @@ class CO2Tree:
                     for index in old_indexes:
                         if index > -1:
                             x_shr = csr_matrix(x[old_indexes[index]],dtype=numpy.float32) 
-                            rs = self.nodes[index].stamp_sign(x_shr,x_)
+                            rs = self.nodes[index].stamp_sign(x_shr)
                             false_mask_left = zeros((x.shape[0],), dtype=bool)
                             false_mask_left[old_indexes[index]] = rs < 0
 
@@ -280,15 +236,15 @@ class CO2Tree:
                     if Y is not None:
                         cmp_r = []
                         for idx in final_estimators:
-                            res[final_estimators[idx]],cmp_res = self.nodes[idx].predict_proba(x[final_estimators[idx]],Y[final_estimators[idx]],x_,use_weight = use_weight)
+                            res[final_estimators[idx]],cmp_res = self.nodes[idx].predict_proba(x[final_estimators[idx]],Y[final_estimators[idx]],use_weight = use_weight)
                             cmp_r += cmp_res
                         return res, cmp_r    
                     else:    
                         for idx in final_estimators:
                             if return_leaf_id:
-                                res[final_estimators[idx]], leaf_ids[final_estimators[idx]] =  self.nodes[idx].predict_proba(x[final_estimators[idx]],x_ = x_,use_weight = use_weight, get_id = True)  
+                                res[final_estimators[idx]], leaf_ids[final_estimators[idx]] =  self.nodes[idx].predict_proba(x[final_estimators[idx]],use_weight = use_weight, get_id = True)  
                             else:    
-                                res[final_estimators[idx]] = self.nodes[idx].predict_proba(x[final_estimators[idx]],x_ = x_,use_weight = use_weight)
+                                res[final_estimators[idx]] = self.nodes[idx].predict_proba(x[final_estimators[idx]],use_weight = use_weight)
 
             if return_leaf_id:
                 return res,leaf_ids 
@@ -316,16 +272,15 @@ class CO2Tree:
             res[i] = self.nodes[lidx].prob
         return res  
     
-    def getIndicators(self,x, x_,noise = 0., balance_noise = False):
-        _, lids = self.predict_proba(x, Y = None,x_ = x_,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
+    def getIndicators(self,x, noise = 0., balance_noise = False):
+        _, lids = self.predict_proba(x, Y = None,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
         max_ind = int(lids.max()) + 1        
-        self.leaves_number = 0
-        for s in self.structure:
-            if s[0] == -1:
-                self.leaves_number += 1
-            if s[1] == -1:
-                self.leaves_number += 1
-        indicators = numpy.zeros((lids.shape[0],self.leaves_number))    
+        if self.leaves_number > 0:
+            indicators = numpy.zeros((x.shape[0],self.leaves_number))            
+        else:    
+            indicators = numpy.zeros((x.shape[0],max_ind))
+            self.leaves_number = max_ind   
+            
         for i in range(lids.shape[0]):
             if int(lids[i]) < self.leaves_number:
                 indicators[i,int(lids[i])] = 1.  

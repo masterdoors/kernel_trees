@@ -14,7 +14,7 @@ Created on 27 марта 2016 г.
 
 @author: keen
 '''
-import CO2_tree as co2
+import CO2_tree_reg as co2
 from multiprocessing import Pool
 from functools import partial
 
@@ -39,10 +39,9 @@ from scipy.stats import entropy
 from numpy import corrcoef
 from numpy import cov
 from sklearn.preprocessing import normalize
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import Ridge
 from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import KFold
-from sklearn.preprocessing import LabelEncoder
 
 def fitter(uuids,forest,shapex,seed_):
     dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
@@ -55,7 +54,7 @@ def fitter(uuids,forest,shapex,seed_):
     #else:
     #    k = 'gaussian'
         
-    tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
+    tree = co2.CO2TreeReg(C=forest.C , kernel=forest.kernel,\
     tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = seed_,\
@@ -64,35 +63,25 @@ def fitter(uuids,forest,shapex,seed_):
     tree.fit(x,Y, preprocess = False)
     return tree
 
-def probber(uuids, shapex,shapex_,tree,stat_only,use_weight = True,withY = False):
+def probber(uuids, shapex,tree,stat_only,use_weight = True,withY = False):
         dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
         indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
         ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-        
-        dataX_ = load('/dev/shm/' + uuids + 'DataX_.npy',mmap_mode='r')
-        indX_ = load('/dev/shm/' + uuids + "IndX_.npy",mmap_mode='r')
-        ptrX_ = load('/dev/shm/' + uuids + "PtrX_.npy",mmap_mode='r')        
         
         if withY:
             Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
         else:
             Y = None            
         x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
-        x_ = csr_matrix((dataX_,indX_,ptrX_), shape=shapex_,dtype=numpy.float32, copy=False)  
-        print("tree x:",x_.shape)
-        return tree.predict_proba(x,Y,x_,preprocess = False,stat_only=stat_only,use_weight=use_weight)    
-
-def indicator(uuids, shapex,shapex_,tree,noise,balance_noise):
+        return tree.predict_proba(x,Y,preprocess = False,stat_only=stat_only,use_weight=use_weight)    
+    
+def indicator(uuids, shapex,tree,noise,balance_noise):
     dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
     indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
     ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-    dataX_ = load('/dev/shm/' + uuids + 'DataX_.npy',mmap_mode='r')
-    indX_ = load('/dev/shm/' + uuids + "IndX_.npy",mmap_mode='r')
-    ptrX_ = load('/dev/shm/' + uuids + "PtrX_.npy",mmap_mode='r')     
 
-    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)  
-    x_ = csr_matrix((dataX_,indX_,ptrX_), shape=shapex_,dtype=numpy.float32, copy=False)      
-    return tree.getIndicators(x, x_,noise = noise, balance_noise = balance_noise)     
+    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
+    return tree.getIndicators(x, noise = noise, balance_noise = balance_noise)     
 
 def statter(tree):
     return tree.getWeights()    
@@ -117,6 +106,20 @@ def weighter(tree,forest,w, offset = 0):
         t.estimateChunkWeights(w_)        
     return t
 
+#def get_cov(counts):
+#    res = numpy.zeros((counts.shape[0],counts.shape[0]))
+#    for i in range(counts.shape[0]):
+#        for j in range(counts.shape[0]):
+#            sm = 0
+#            total = 0
+#            for k in range(counts.shape[1]):
+#                if counts[i,k] == 1 and counts[j,k] == 1:
+#                    sm += 1
+#                if counts[i,k] == 1 or counts[j,k] == 1:
+#                    total += 1    
+#            res[i,j] = float(sm) / total
+#    return res       
+
 def testerL2(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
     tests = []
     orig_tests = []
@@ -132,22 +135,21 @@ def testerL2(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
             lr_data = mm.transform(lr_data)       
             lr_data_test = mm.transform(lr_data_test)            
 
-            lr = LogisticRegression(C=c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)
+                            solver='saga',
+                            max_iter=1000)
 
             lr.fit(lr_data, splits_Y[i][0])
 
             to_remove,before,after = tr.prune(lr_data, lr.coef_, n)
             lr_data = tr.do_prune(lr_data,to_remove)
 
-            lr = LogisticRegression(C=c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)                    
+                            solver='saga',
+                            max_iter=1000)
+            
             lr.fit(lr_data, splits_Y[i][0])
 
             lr_data = tr.do_prune(lr_data_test,to_remove)
@@ -171,11 +173,10 @@ def testerNoise(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
             lr_data = mm.transform(lr_data)       
             lr_data_test = mm.transform(lr_data_test)               
 
-            lr = LogisticRegression(C=c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)
+                            solver='saga',
+                            max_iter=1000)
 
             lr.fit(lr_data, splits_Y[i][0])
             y_pred_ = lr.predict(lr_data_test)                 
@@ -197,11 +198,10 @@ def testerNaive(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
 
             lr_data = mm.transform(lr_data)       
             
-            lr = LogisticRegression(C=c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)                    
+                            solver='saga',
+                            max_iter=1000)                    
 
 
             lr.fit(lr_data, splits_Y[i][0])
@@ -213,11 +213,11 @@ def testerNaive(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
                 remain_idxs = numpy.logical_or(remain_idxs,coeffs[j] >= max_coefs[j] * n) 
 
             lr_data_tr = lr_data[:,remain_idxs]  
-            lr = LogisticRegression(C=c,
-                        fit_intercept=False,
-                        solver='lbfgs',
-                        max_iter=1000,
-                        multi_class='multinomial', n_jobs=-1)                    
+            lr = Ridge(alpha=1./ c,
+                            fit_intercept=False,
+                            solver='saga',
+                            max_iter=1000)
+            
             lr.fit(lr_data_tr, splits_Y[i][0])
             lr_data = lr_data_test
             lr_data = mm.transform(lr_data)  
@@ -243,11 +243,10 @@ def testerL2_noise(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n,n2):
             lr_data = mm.transform(lr_data)       
             lr_data_test = mm.transform(lr_data_test)               
 
-            lr = LogisticRegression(C=c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)
+                            solver='saga',
+                            max_iter=1000)
 
             lr.fit(lr_data, splits_Y[i][0])
             
@@ -256,11 +255,11 @@ def testerL2_noise(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n,n2):
             to_remove,before,after = tr.prune(lr_data, lr.coef_, n)
             lr_data = tr.do_prune(lr_data,to_remove)
 
-            lr = LogisticRegression(C=c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)                    
+                            solver='saga',
+                            max_iter=1000)
+            
             lr.fit(lr_data, splits_Y[i][0])
             #print("fit test",c,n,n2)
             
@@ -275,7 +274,8 @@ def inter_log(*args):
     with open("runlog.txt","a") as f:
         f.write(", ".join(args_) + "\n")
 
-class CO2_forest:
+
+class CO2_forestReg:
     def eliminatedForest(self):
         that = deepcopy(self)
         for i in range(that.n_estimators):
@@ -303,6 +303,7 @@ class CO2_forest:
             self.trees.append(tree)
             
     def prune(self, indicators, coefs, ratio):
+        coefs = coefs.reshape(1,-1)
         offset = 0
         j = 0
         norm_sums = {}
@@ -349,11 +350,10 @@ class CO2_forest:
         return numpy.sqrt(cov_.sum())
     
     def reinforce_prune(self,n,C,X,Y):
-        lr = LogisticRegression(C=C,
-                        fit_intercept=False,
-                        solver='lbfgs',
-                        max_iter=100,
-                        multi_class='multinomial', n_jobs=-1)            
+        lr = Ridge(alpha=1./ C,
+                            fit_intercept=False,
+                            solver='saga',
+                            max_iter=1000)            
 
         lr_data = self.getIndicators(X)
         mm = make_pipeline(MinMaxScaler(), Normalizer())
@@ -365,26 +365,16 @@ class CO2_forest:
         to_remove,best_before,best_after = self.prune(lr_data, lr.coef_, n)
         lr_data = self.do_prune(lr_data,to_remove) 
         self.to_remove = to_remove
-        lr = LogisticRegression(C=C,
-                        fit_intercept=False,
-                        solver='lbfgs',
-                        max_iter=100,
-                        multi_class='multinomial', n_jobs=-1) 
+        lr = Ridge(alpha=1./ C,
+                            fit_intercept=False,
+                            solver='saga',
+                            max_iter=1000) 
         lr.fit(lr_data, Y) 
-        self.lr = lr
-                        
+        self.lr = lr    
 
     #@profile
     def fit(self,x,Y,x_test=None, Y_test=None,model=False):
-        
         x = csr_matrix(x)
-        self.x = deepcopy(x)
-        
-        self.le = LabelEncoder().fit(Y)
-        Y = self.le.transform(Y)
-        if Y_test is not None:
-            Y_test = self.le.transform(Y_test)
-     
         if not model:
             uuids = str(uuid.uuid4())
 
@@ -393,7 +383,7 @@ class CO2_forest:
             save('/dev/shm/'+ uuids + "PtrX",x.indptr)
             save('/dev/shm/'+ uuids + "DataY",Y) 
 
-            self.trees = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(fitter)(uuids,self,x.shape,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))
+            self.trees = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(fitter)(uuids,self,x.shape,i) for i in range(self.n_estimators))
 
             os.remove('/dev/shm/'+ uuids + "DataX.npy")
             os.remove('/dev/shm/'+ uuids + "IndX.npy")
@@ -402,10 +392,10 @@ class CO2_forest:
         else:
             with open('forest.pickle', 'rb') as f:
                 self.trees = pickle.load(f).trees     
-        
+                
         if self.reinforced:
-            self.reinforce_prune(self.prune_level,self.reC,x,Y)
-            
+            self.reinforce_prune(self.prune_level,self.reC,x,Y)                
+        
         if self.cov_dr > 0:   
             with open('forest.pickle', 'wb') as f:
                 pickle.dump(self, f)              
@@ -441,10 +431,7 @@ class CO2_forest:
                 
             inter_log("Done")   
             
-    def    do_tests(self,x,Y,x_test, Y_test):       
-            Y = self.le.transform(Y)
-            Y_test = self.le.transform(Y_test)
-        
+    def    do_tests(self,x,Y,x_test, Y_test):             
             best = 1.
             best_c = 0
             best_n = 0
@@ -466,11 +453,10 @@ class CO2_forest:
                     best_n = n  
                     best_n2 = n2
                      
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)            
+                            solver='saga',
+                            max_iter=1000)            
             
             lr_data = self.addNoise(self.main_inds_train,best_n2)
             mm = make_pipeline(MinMaxScaler(), Normalizer())
@@ -482,11 +468,10 @@ class CO2_forest:
             
             to_remove,best_before,best_after = self.prune(lr_data, lr.coef_, best_n)
             lr_data = self.do_prune(lr_data,to_remove)            
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1) 
+                            solver='saga',
+                            max_iter=1000) 
             lr.fit(lr_data, Y)  
             #best_r3 = self.get_cov(lr_data, lr.coef_) 
 
@@ -513,11 +498,10 @@ class CO2_forest:
 
                     lr_data = mm.transform(lr_data)                       
                     
-                    lr = LogisticRegression(C=c,
-                                    fit_intercept=False,
-                                    solver='lbfgs',
-                                    max_iter=100,
-                                    multi_class='multinomial', n_jobs=-1)
+                    lr = Ridge(alpha=1./ c,
+                            fit_intercept=False,
+                            solver='saga',
+                            max_iter=1000)
 
                     lr.fit(lr_data, splits_Y[i][0])
                     lr_data = splits[i][1]
@@ -538,11 +522,10 @@ class CO2_forest:
 
             lr_data = mm.transform(lr_data)               
             
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)
+                            solver='saga',
+                            max_iter=1000)
 
             lr.fit(lr_data, Y)
             #best_r3 = self.get_cov(lr_data, lr.coef_)            
@@ -568,11 +551,10 @@ class CO2_forest:
                     best_c = c
                     best_n = n  
                 
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)
+                            solver='saga',
+                            max_iter=1000)
             
             lr_data = self.addNoise(self.main_inds_train, best_n)     
             mm = make_pipeline(MinMaxScaler(), Normalizer())
@@ -606,11 +588,10 @@ class CO2_forest:
                     best_c = c
                     best_n = n  
                 
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)            
+                            solver='saga',
+                            max_iter=1000)            
             
             lr_data = self.main_inds_train
             mm = make_pipeline(MinMaxScaler(), Normalizer())
@@ -628,11 +609,10 @@ class CO2_forest:
                     
             lr_data = lr_data[:,remain_idxs] 
           
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)   
+                            solver='saga',
+                            max_iter=1000)   
             lr.fit(lr_data, Y)
             #est_r3 = self.get_cov(lr_data, lr.coef_) 
             lr_data = self.main_inds_test
@@ -660,11 +640,10 @@ class CO2_forest:
                     best_c = c
                     best_n = n  
 
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)            
+                            solver='saga',
+                            max_iter=1000)            
             
             lr_data = self.main_inds_train
             mm = make_pipeline(MinMaxScaler(), Normalizer())
@@ -675,11 +654,11 @@ class CO2_forest:
             
             to_remove,best_before,best_after = self.prune(lr_data, lr.coef_, best_n)
             lr_data = self.do_prune(lr_data,to_remove)            
-            lr = LogisticRegression(C=best_c,
+            lr = Ridge(alpha=1./ c,
                             fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1) 
+                            solver='saga',
+                            max_iter=1000)
+            
             lr.fit(lr_data, Y)  
             #best_r3 = self.get_cov(lr_data, lr.coef_) 
             lr_data = self.main_inds_test
@@ -701,6 +680,8 @@ class CO2_forest:
             inter_log ("Delta orig:", rs_train - rs_local)
 
     def sequential_predict(self,x,use_weight=True):
+        x = csr_matrix(x)
+
         probas = []
         for tree in self.trees:
             probas.append(tree.predict_proba(x,None,preprocess = False,stat_only=False,use_weight=use_weight)) 
@@ -709,14 +690,16 @@ class CO2_forest:
         res =  argmax(proba, axis = 1)
         zr = res == 0
         res[zr] = 1
-        return self.le.inverse_transform(res)   
+        return res   
     
     def sequential_predict_proba(self,x,use_weight=True):
+        x = csr_matrix(x)
+        
         probas = []
         for i in range(len(self.trees)):
             probas.append(self.trees[i].predict_proba(x,None,preprocess = False,stat_only=False,use_weight=use_weight)) 
 
-        proba =  asarray(probas)#[:,1:]
+        proba =  asarray(probas)
         return proba      
 
     def predict(self,x,Y=None,use_weight=True):
@@ -724,38 +707,30 @@ class CO2_forest:
             proba, cmp = self.predict_proba(x,Y,use_weight=use_weight)
         else:
             proba = self.predict_proba(x,Y,use_weight=use_weight)    
-        res =  argmax(proba, axis = 1)
-        zr = res == 0
-
-        #print ("Unknown errors: ", zr.astype(int).sum())
-        res[zr] = 1
+        res =  proba #argmax(proba, axis = 1)
+        #zr = res == 0
         
-        res = self.le.inverse_transform(res)
+        #print ("Unknown errors: ", zr.astype(int).sum())
+        #res[zr] = 1
         if Y is not None:
             return res,cmp
         else:
             return res    
         
     def getIndicators(self,x, noise= 0., balance_noise = False):
+        x = csr_matrix(x)
+        
         uuids = str(uuid.uuid4())
         
         save('/dev/shm/'+ uuids + "DataX",x.data)
         save('/dev/shm/'+ uuids + "IndX",x.indices)
-        save('/dev/shm/'+ uuids + "PtrX",x.indptr)      
-        
-        save('/dev/shm/'+ uuids + "DataX_",self.x.data)
-        save('/dev/shm/'+ uuids + "IndX_",self.x.indices)
-        save('/dev/shm/'+ uuids + "PtrX_",self.x.indptr)         
+        save('/dev/shm/'+ uuids + "PtrX",x.indptr)        
 
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,self.x.shape,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,t,noise,balance_noise) for t in self.trees)
 
         os.remove('/dev/shm/'+ uuids + "DataX.npy")
         os.remove('/dev/shm/'+ uuids + "IndX.npy")
-        os.remove('/dev/shm/'+ uuids + "PtrX.npy")  
-        
-        os.remove('/dev/shm/'+ uuids + "DataX_.npy")
-        os.remove('/dev/shm/'+ uuids + "IndX_.npy")
-        os.remove('/dev/shm/'+ uuids + "PtrX_.npy")         
+        os.remove('/dev/shm/'+ uuids + "PtrX.npy")        
         
         res = sorted(res, key=lambda tup: tup[1])
         indicators = [r for r,i in res]
@@ -785,62 +760,46 @@ class CO2_forest:
         return numpy.asarray(ret_arr,dtype=int)    
     
     def predict_proba(self,x,Y=None,avg='macro',use_weight=True):
-        x = csr_matrix(x)           
-        if self.reinforced:
-            inds = self.getIndicators(x)
-            inds = self.do_prune(inds,self.to_remove)
-            r = self.lr.decision_function(inds)
-            return r
-        else:    
-            uuids = str(uuid.uuid4())
+        x = csr_matrix(x)
+        
+        uuids = str(uuid.uuid4())
+        
+        save('/dev/shm/'+ uuids + "DataX",x.data)
+        save('/dev/shm/'+ uuids + "IndX",x.indices)
+        save('/dev/shm/'+ uuids + "PtrX",x.indptr)        
 
-            save('/dev/shm/'+ uuids + "DataX",x.data)
-            save('/dev/shm/'+ uuids + "IndX",x.indices)
-            save('/dev/shm/'+ uuids + "PtrX",x.indptr)       
-            
-            save('/dev/shm/'+ uuids + "DataX_",self.x.data)
-            save('/dev/shm/'+ uuids + "IndX_",self.x.indices)
-            save('/dev/shm/'+ uuids + "PtrX_",self.x.indptr)   
-            
-            print ("self.x:", self.x.shape)
+        if Y is not None:
+            save('/dev/shm/'+ uuids + "DataY",Y) 
+        res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,t,False,use_weight,Y is not None) for t in self.trees)
 
-            if Y is not None:
-                Y = self.le.transform(Y)
-                save('/dev/shm/'+ uuids + "DataY",Y) 
-            res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,self.x.shape,t,False,use_weight,Y is not None) for t in self.trees)
+        os.remove('/dev/shm/'+ uuids + "DataX.npy")
+        os.remove('/dev/shm/'+ uuids + "IndX.npy")
+        os.remove('/dev/shm/'+ uuids + "PtrX.npy")
 
-            os.remove('/dev/shm/'+ uuids + "DataX.npy")
-            os.remove('/dev/shm/'+ uuids + "IndX.npy")
-            os.remove('/dev/shm/'+ uuids + "PtrX.npy")
-            
-            os.remove('/dev/shm/'+ uuids + "DataX_.npy")
-            os.remove('/dev/shm/'+ uuids + "IndX_.npy")
-            os.remove('/dev/shm/'+ uuids + "PtrX_.npy")            
 
-            rr = []
-            rs = []               
-            if Y is not None:
-                os.remove('/dev/shm/'+ uuids + "DataY.npy")
-                for r in res:
-                    rr.append(r[0])
-                    rs += r[1]
-                res = rr    
-            if Y is not None:
-                
-                if avg == 'macro':
-                    return multiply(asarray(res).sum(axis=0), 1. / self.n_estimators),rs
-                else:
-                    return asarray(res), rs            
-            else:        
-                if avg == 'macro':
-                    return asarray(res).sum(axis=0)#[:,1:]
-                else:
-                    return asarray(res)#[:,1:]
+        rr = []
+        rs = []               
+        if Y is not None:
+            os.remove('/dev/shm/'+ uuids + "DataY.npy")
+            for r in res:
+                rr.append(r[0])
+                rs += r[1]
+            res = rr    
+        if Y is not None:
+            if avg == 'macro':
+                return multiply(asarray(res).sum(axis=0), 1. / self.n_estimators),rs
+            else:
+                return asarray(res), rs            
+        else:        
+            if avg == 'macro':
+                return asarray(res).sum(axis=0)*(1. / self.n_estimators)
+            else:
+                return asarray(res)
 
         
     def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
-                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini',spatial_mul=1.0,reinforced = False, prune_level = 0.,reC=10,id_=0):
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini',spatial_mul=1.0, reinforced = False, prune_level = 0.,reC=10,id_=0):
         self.criteria = criteria
         self.C = C
         self.min_samples_split = min_samples_split
@@ -866,7 +825,8 @@ class CO2_forest:
         self.prune_level = 0
         self.reC = 10.
         self.reinforced = reinforced
-        self.id_ = id_
+        self.id_ = id_        
+        
 
 
 
