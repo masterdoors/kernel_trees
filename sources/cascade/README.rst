@@ -1,4 +1,8 @@
-Deep Forest (DF) 21
+Branch of the Zhou's Deep Forest (DF) 21 to work with Kernel Forests
+
+Differences:
+- We added a sliding window layer with pooling.
+- The binner module is disabled (it ruins results of the KF).
 ===================
 
 |github|_ |readthedocs|_ |codecov|_ |python|_ |pypi|_ |style|_
