@@ -1,4 +1,4 @@
-Branch of the Zhou's Deep Forest (DF) 21 to work with Kernel Forests
+Branch of the Zhou's Deep Forest (DF) 21 to work with Kernel Forests.
 
 Differences:
 - We added a sliding window layer with pooling.
