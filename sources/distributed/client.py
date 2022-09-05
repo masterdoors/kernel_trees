@@ -23,7 +23,7 @@ import socket
 BUFFER_SIZE = 1024*32
 
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
-    print(cmd,mark,addr)
+    print(cmd,mask,addr)
     package = [] 
     package.append(0)
     package.append(cmd)
