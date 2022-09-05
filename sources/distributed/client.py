@@ -213,12 +213,11 @@ class Client:
 
 
     def run_node(self):
-        thread_proc = Thread(target = self.fit, args = [])
-        thread_ping = Thread(target = self.ping, args = [])
+        thread_proc = Thread(target = self.fit, daemon=True,args = [])
+        thread_ping = Thread(target = self.ping, daemon=True, args = [])
         thread_proc.start()
         thread_ping.start()
-        thread_proc.join()
-        thread_ping.join()
+        #thread_ping.join()
 
     def ping(self):
         while not self.stop:
@@ -573,12 +572,7 @@ def run_problem():
                      sample_ratio=sample_ratio, feature_ratio=feature_ratio,dual=dual,C=C,tol=tol,max_iter=max_iter,dropout_low=dropout_low, \
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
-            #client.run_node()
-            #thread_proc = Thread(target = self.fit, args = [])
-            thread_ping = Thread(target = client.ping, name="Ping")
-            thread_ping.start()
-            client.fit()
-            thread_ping.join()
+            client.run_node()
         except Exception as e:
             print("The utils has been finished with the message:", e)
                 
