@@ -575,7 +575,7 @@ def run_problem():
         try:
             #client.run_node()
             #thread_proc = Thread(target = self.fit, args = [])
-            thread_ping = Thread(target = client.ping, name="Ping", daemon = True)
+            thread_ping = Thread(target = client.ping, name="Ping")
             thread_ping.start()
             client.fit()
             thread_ping.join()
