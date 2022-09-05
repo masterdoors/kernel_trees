@@ -24,7 +24,8 @@ import socket
 BUFFER_SIZE = 1024*32
 
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
-    print(cmd,mask,addr)
+    if cmd != 3:
+        print(cmd,mask,addr)
     package = [] 
     package.append(0)
     package.append(cmd)
@@ -221,7 +222,7 @@ class Client:
 
     def ping(self):
         while not self.stop:
-            print("ping",os.getpid(), self.id)
+            #print("ping",os.getpid(), self.id)
             if self.id > -1:
                 command(3, id=self.id,addr=self.addr)
             time.sleep(3)
