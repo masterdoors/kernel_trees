@@ -13,6 +13,7 @@ import time
 import math   
 from scipy import sparse 
 from sklearn.svm import LinearSVC
+from sklearn.linear_model import SGDClassifier
 from sklearn.svm import SVC
 from sympy.utilities.iterables import multiset_permutations
 
@@ -494,8 +495,9 @@ class Client:
         try:
             if self.kernel == 'linear':
                 if not self.dual:
-                    model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                    model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                    self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
+                    #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
+                    self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                 else:  
                     model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                     model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
@@ -511,37 +513,6 @@ class Client:
             print("Error ",self.id)   
             return 0.            
 
-        if self.dropout_low > 0 or self.dropout_high < 1.:
-            coeffs = numpy.abs(self.model.coef_).flatten()
-            max_coeff = coeffs.max()
-            if max_coeff > 0:
-                coeffs = coeffs / max_coeff
-          
-            den = numpy.exp(self.dropout_low*coeffs)
-            p = den / den.sum()
-            remain_idxs = numpy.random.choice(len(coeffs), size=len(coeffs), replace=True, p=p)                
-            if self.features_weight[remain_idxs].shape[0] < 1:
-                remain_idxs = numpy.asarray([numpy.argmax(numpy.abs(self.model.coef_.flatten()), axis = 0)])  
-         
-            self.features_weight = self.features_weight[remain_idxs]
-            x_tmp = x_tmp[:,remain_idxs]
-
-            if self.kernel == 'linear':
-                if not self.dual:
-                    model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                    model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
-                else:
-                    model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                    model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
-
-            else:
-                if self.kernel == 'polynomial':
-                    model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                    model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
-                else:
-                    if self.kernel == 'gaussian':
-                        model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter)
-                        model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
         self.estimateTetas(x_tmp, Y_tmp,model)    
         print("Done",os.getpid(),self.id)             
         return model,self.features_weight
