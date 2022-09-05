@@ -389,7 +389,7 @@ class Client:
 
         min_gini = self.max_criteria
         min_p = []
-      
+        print ("Set classes to side")
         if len(class_counts) > 13:
         #Greedy
             for _ in range(len(class_counts)*len(class_counts)*15):
@@ -473,7 +473,8 @@ class Client:
 
         Hsize, IH,IY, gini_old_wise = self.getDeltaParams(H,Y_tmp, self.criteria)
         gini_best = gini_old - gini_best
-
+        
+        print ("Set sample weight")   
         deltas = numpy.zeros(shape=(H.shape[1]))
         for i in range(H.shape[1]):
             gini_i = self.delta_wise(Hsize, IH,IY,Y_tmp[i],-H[0,i],self.criteria)
@@ -494,9 +495,10 @@ class Client:
             gauss_noise = numpy.random.normal(numpy.ones((x_tmp.shape[1],),dtype=float),self.noise,(1,x_tmp.shape[1]))
             x_tmp = sparse.csr_matrix(x_tmp.multiply(gauss_noise),dtype=numpy.float32)
         try:
+            print ("Train a classifier",self.kernel)
             if self.kernel == 'linear':
                 if not self.dual:
-                    self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
+                    self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive',verbose=1)
                     #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                     self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                 else:  
