@@ -1,4 +1,3 @@
-addr
 import pickle
 from threading import Thread
 from copy import deepcopy
