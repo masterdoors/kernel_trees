@@ -53,7 +53,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
             msg = sock.recv(BUFFER_SIZE)
     except Exception as e:
         print("Error while trying to read the command result. cmd: ",cmd,e)
-        with open("/var/log/forest.log","a") as f:
+        with open("/var/log/apache2/forest.log","a") as f:
             f.write(str(cmd) + " "+ str(e) + "\n")
 
         
@@ -229,12 +229,12 @@ class Client:
             time.sleep(3)
 
     def fit(self):
-        with open("/var/log/forest.log","w") as f:
+        with open("/var/log/apache2/forest.log","w") as f:
             f.write("Fitting loop has been started!\n") 
         
         while not self.stop:
             try:
-                with open("/var/log/forest.log","a") as f:
+                with open("/var/log/apache2/forest.log","a") as f:
                     f.write(str(self.addr) + "\n")
                     
                 data = command(1,addr=self.addr)
