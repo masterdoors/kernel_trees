@@ -573,7 +573,7 @@ def run_problem():
                      sample_ratio=sample_ratio, feature_ratio=feature_ratio,dual=dual,C=C,tol=tol,max_iter=max_iter,dropout_low=dropout_low, \
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
-            client.run_node()
+            #client.run_node()
             #thread_proc = Thread(target = self.fit, args = [])
             thread_ping = Thread(target = client.ping, name="Ping", daemon = True)
             thread_ping.start()
