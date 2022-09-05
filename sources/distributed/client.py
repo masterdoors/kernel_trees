@@ -341,7 +341,8 @@ class Client:
         return res      
 
     def optimize(self, sample_weight):
-        print ("Start training...",os.getpid(),self.id,numpy.count_nonzero(sample_weight))
+        print ("Start training...",os.getpid(),self.id,numpy.count_nonzero(sample_weight),numpy.count_nonzero(self.x),numpy.count_nonzero(self.Y))
+
         numpy.random.seed()
         if self.x.shape[0] > 0:
             sample_idx = sample_weight > 0
@@ -360,7 +361,7 @@ class Client:
             if diff_y.shape[0] > 1:
                 x_tmp = x_
                 Y_tmp = Y_
-      
+
         def nu(arr):
             return numpy.asarray([1 + numpy.unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
       
