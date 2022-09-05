@@ -574,6 +574,11 @@ def run_problem():
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
             client.run_node()
+            #thread_proc = Thread(target = self.fit, args = [])
+            thread_ping = Thread(target = client.ping, args = [])
+            thread_ping.start()
+            client.fit()
+            thread_ping.join()
         except Exception as e:
             print("The utils has been finished with the message:", e)
                 
