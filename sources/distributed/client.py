@@ -23,6 +23,7 @@ import socket
 BUFFER_SIZE = 1024*32
 
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
+    print(cmd,mark,addr)
     package = [] 
     package.append(0)
     package.append(cmd)
@@ -52,10 +53,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
             data += msg
             msg = sock.recv(BUFFER_SIZE)
     except Exception as e:
-        print("Error while trying to read the command result. cmd: ",cmd,e)
-        with open("/var/log/apache2/forest.log","a") as f:
-            f.write(str(cmd) + " "+ str(e) + "\n")
-
+        print(cmd, str(e))
         
     sock.close() 
     return data  
@@ -229,14 +227,9 @@ class Client:
             time.sleep(3)
 
     def fit(self):
-        with open("/var/log/apache2/forest.log","w") as f:
-            f.write("Fitting loop has been started!\n") 
-        
         while not self.stop:
             try:
-                with open("/var/log/apache2/forest.log","a") as f:
-                    f.write(str(self.addr) + "\n")
-                    
+                print ("fit", self.addr)     
                 data = command(1,addr=self.addr)
                 if len(data) > 0:
                     ###get data to process
