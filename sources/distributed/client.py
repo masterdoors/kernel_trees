@@ -582,7 +582,7 @@ def run_problem():
             thread_ping = Thread(target = get_ping(client.id, client.addr), name="ping",args=(event,))
             thread_ping.start()
                       
-            self.fit()
+            client.fit()
             event.set()
             thread_ping.join()
         except Exception as e:
