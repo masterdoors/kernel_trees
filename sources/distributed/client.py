@@ -1,5 +1,6 @@
 import pickle
 from threading import Thread
+from threading import Event
 from copy import deepcopy
 import numpy
 import os
@@ -60,12 +61,13 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     sock.close() 
     return data  
 
-def ping():
-    while not self.stop:
+def ping(event):
+    while True:
         #print("ping",os.getpid(), self.id)                                                                                                                                                                 
-        if self.id > -1:
-            command(3, id=self.id,addr=self.addr)
+        command(3, id=self.id,addr=self.addr)
         time.sleep(3)
+        if event.is_set():
+            break        
 
 class Client:
     
@@ -226,13 +228,6 @@ class Client:
         #thread_proc.start()
         thread_ping.start()
         #thread_ping.join()
-
-    def ping(self):
-        while not self.stop:
-            #print("ping",os.getpid(), self.id)
-            if self.id > -1:
-                command(3, id=self.id,addr=self.addr)
-            time.sleep(3)
 
     def fit(self):
         while not self.stop:
@@ -580,8 +575,13 @@ def run_problem():
                      sample_ratio=sample_ratio, feature_ratio=feature_ratio,dual=dual,C=C,tol=tol,max_iter=max_iter,dropout_low=dropout_low, \
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
-            client.run_node()
+            event = Event()
+            thread_ping = Thread(target = ping, name="ping",args=(event,))
+            thread_ping.start()
+                      
             self.fit()
+            event.set()
+            thread_ping.join()
         except Exception as e:
             print("The utils has been finished with the message:", e)
                 
