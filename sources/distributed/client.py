@@ -60,6 +60,13 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     sock.close() 
     return data  
 
+def ping():
+    while not self.stop:
+        #print("ping",os.getpid(), self.id)                                                                                                                                                                 
+        if self.id > -1:
+            command(3, id=self.id,addr=self.addr)
+        time.sleep(3)
+
 class Client:
     
     def calcGini(self,x,Y, model, features_weight, report = False):
@@ -215,7 +222,7 @@ class Client:
 
     def run_node(self):
         #thread_proc = Thread(target = self.fit, name="proc")
-        thread_ping = Thread(target = self.ping, name="ping")
+        thread_ping = Thread(target = ping, name="ping")
         #thread_proc.start()
         thread_ping.start()
         #thread_ping.join()
