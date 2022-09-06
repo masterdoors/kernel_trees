@@ -397,6 +397,7 @@ class Client:
         print ("Set classes to side")
         if len(class_counts) > 13:
         #Greedy
+            print (class_counts)
             for _ in range(len(class_counts)*len(class_counts)*15):
                 lmin_gini = self.max_criteria
                 lmin_p = []
@@ -406,7 +407,8 @@ class Client:
                 p = numpy.random.choice(elements,len(class_counts) , p=probabilities)
 
                 zc = 0 
-                while next:
+                while next
+                    print(zc):
                     next = False
                     zc += 1  
                     for i in range(p.shape[0]):
