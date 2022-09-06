@@ -408,7 +408,7 @@ class Client:
 
                 zc = 0 
                 while next:
-                    print(zc):
+                    print(zc)
                     next = False
                     zc += 1  
                     for i in range(p.shape[0]):
