@@ -407,7 +407,7 @@ class Client:
                 p = numpy.random.choice(elements,len(class_counts) , p=probabilities)
 
                 zc = 0 
-                while next
+                while next:
                     print(zc):
                     next = False
                     zc += 1  
