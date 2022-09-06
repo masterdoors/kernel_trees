@@ -437,8 +437,10 @@ class Client:
   
         else:
             for zc in range(1,len(class_counts),1):
+                print (zc)
                 a = numpy.hstack([-numpy.ones((zc,)),numpy.ones((len(class_counts) - zc,))])
                 for p in multiset_permutations(a):
+                    print(len(p))
                     p = numpy.asarray(p)
                     left_counts = class_counts[p < 0, 1]
                     right_counts = class_counts[p > 0, 1]
@@ -582,10 +584,7 @@ def run_problem():
             thread_ping = Thread(target = get_ping(client.id, client.addr), name="ping",args=(event,))
             thread_ping.start()
                       
-            #client.fit()
-            for i in range(300):
-                print(i)
-                time.sleep(3)
+            client.fit()
             event.set()
             thread_ping.join()
         except Exception as e:
