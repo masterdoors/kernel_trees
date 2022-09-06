@@ -61,13 +61,16 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     sock.close() 
     return data  
 
-def ping(event):
-    while True:
-        #print("ping",os.getpid(), self.id)                                                                                                                                                                 
-        command(3, id=self.id,addr=self.addr)
-        time.sleep(3)
-        if event.is_set():
-            break        
+def get_ping(id_,addr):
+    def ping(event):
+        while True:
+            #print("ping",os.getpid(), self.id)
+            if id_ > -1:
+                command(3, id=id_,addr=addr)
+            time.sleep(3)
+            if event.is_set():
+                break        
+    return ping
 
 class Client:
     
@@ -576,7 +579,7 @@ def run_problem():
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
             event = Event()
-            thread_ping = Thread(target = ping, name="ping",args=(event,))
+            thread_ping = Thread(target = get_ping(client.id, client.addr), name="ping",args=(event,))
             thread_ping.start()
                       
             self.fit()
