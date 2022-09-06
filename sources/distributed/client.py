@@ -214,9 +214,9 @@ class Client:
 
 
     def run_node(self):
-        thread_proc = Thread(target = self.fit, daemon=True,args = [])
-        thread_ping = Thread(target = self.ping, daemon=True, args = [])
-        thread_proc.start()
+        #thread_proc = Thread(target = self.fit, name="proc")
+        thread_ping = Thread(target = self.ping, name="ping")
+        #thread_proc.start()
         thread_ping.start()
         #thread_ping.join()
 
@@ -574,6 +574,7 @@ def run_problem():
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
             client.run_node()
+            self.fit()
         except Exception as e:
             print("The utils has been finished with the message:", e)
                 
