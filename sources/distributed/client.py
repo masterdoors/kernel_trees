@@ -235,7 +235,7 @@ class Client:
         #thread_ping.join()
 
     def fit(self):
-        while not self.stop:
+        while True:
             try:
                 print ("fit", self.addr)     
                 data = command(1,addr=self.addr)
@@ -592,7 +592,9 @@ def run_problem():
                       
             client.fit()
             event.set()
+            print ("Fit is finished. Wait for the ping thread...")
             thread_ping.join()
+            print("The ping thread is finished. Exit run_problem.")
         except Exception as e:
             print("The utils has been finished with the message:", e)
                 
