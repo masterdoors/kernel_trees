@@ -296,7 +296,9 @@ class Client:
                         self.id = -1
                         break
             except Exception as e:
-                print("Exception in the main cycle: ",e)    
+                print("Exception in the main cycle: ",e)
+                self.id = -1
+                break             
             finally:        
                 self.id = -1 
 
