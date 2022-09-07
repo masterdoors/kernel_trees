@@ -303,7 +303,7 @@ class Client:
                 break             
             finally:        
                 self.id = -1
-                self.stop = True
+                
 
       
     def criteriaGini(self,pj):
