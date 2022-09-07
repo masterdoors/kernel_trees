@@ -282,6 +282,7 @@ class Client:
                     arr_data = bytearray(data)
                     q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
                     q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little')
+                    print("Check the queue status (idle/run):",q_idle,q_run)
                     if q_idle == 0 and q_run == 0:
                         self.id = -1
                         break
