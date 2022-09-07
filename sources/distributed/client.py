@@ -43,12 +43,14 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
 
     cmd_str =  b''.join(package)
     cont = True
+    data = b''
+    
     while cont:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect(addr)
-        sock.sendall(bytes(cmd_str))
-        data = b''  
-        try:  
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(addr)
+            sock.sendall(bytes(cmd_str))
+         
             msg = sock.recv(BUFFER_SIZE)
             while msg:
                 data += msg
@@ -61,7 +63,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
 
         if (cmd == 1 or cmd ==5) and len(data) == 0:
             cont = True
-            print ("Truing again with cmd: ", cmd)
+            print ("Trying again with cmd: ", cmd)
         else:
             cont = False
     return data  
@@ -243,14 +245,7 @@ class Client:
         while True:
             try:
                 print ("fit", self.addr)
-                data = command(5,addr=self.addr)
-            
-                arr_data = bytearray(data)
-                size = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
-                q_idle = int.from_bytes(bytes(arr_data[8:16]),byteorder='little')
-                q_run = int.from_bytes(bytes(arr_data[16:]),byteorder='little')
-                print("Check the queue status (idle/run):",arr_data,q_idle,q_run)
-                
+                                
                 data = command(1,addr=self.addr)
                 if len(data) > 0:
                     ###get data to process
@@ -301,7 +296,7 @@ class Client:
                         self.id = -1
                         break
             except Exception as e:
-                print("Exception is the main cycle: ",e)    
+                print("Exception in the main cycle: ",e)    
             finally:        
                 self.id = -1 
 
