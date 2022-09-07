@@ -236,7 +236,13 @@ class Client:
     def fit(self):
         while True:
             try:
-                print ("fit", self.addr)     
+                print ("fit", self.addr)
+                data = command(5,addr=self.addr)
+                arr_data = bytearray(data)
+                q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
+                q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little')
+                print("Check the queue status (idle/run):",q_idle,q_run)
+                
                 data = command(1,addr=self.addr)
                 if len(data) > 0:
                     ###get data to process
