@@ -285,6 +285,8 @@ class Client:
                     if q_idle == 0 and q_run == 0:
                         self.id = -1
                         break
+            except Exception as e:
+                print("Exception is the main cycle: ",e)    
             finally:        
                 self.id = -1 
 
