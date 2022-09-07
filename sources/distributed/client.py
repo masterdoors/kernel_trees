@@ -46,11 +46,11 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     data = b''
     
     while cont:
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.connect(addr)
-            sock.sendall(bytes(cmd_str))
-         
+     
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(addr)
+        sock.sendall(bytes(cmd_str))
+        try    
             msg = sock.recv(BUFFER_SIZE)
             while msg:
                 data += msg
@@ -60,7 +60,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
         time.sleep(1)    
         
         sock.close()
-
+        
         if (cmd == 1 or cmd ==5) and len(data) == 0:
             cont = True
             print ("Trying again with cmd: ", cmd)
@@ -242,7 +242,7 @@ class Client:
         #thread_ping.join()
 
     def fit(self):
-        while True:
+        while not self.stop:
             try:
                 print ("fit", self.addr)
                                 
@@ -294,13 +294,16 @@ class Client:
                     print("Check the queue status (idle/run):",q_idle,q_run)
                     if q_idle == 0 and q_run == 0:
                         self.id = -1
+                        self.stop = True
                         break
             except Exception as e:
                 print("Exception in the main cycle: ",e)
                 self.id = -1
+                self.stop = True
                 break             
             finally:        
-                self.id = -1 
+                self.id = -1
+                self.stop = True
 
       
     def criteriaGini(self,pj):
