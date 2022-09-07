@@ -510,9 +510,9 @@ class Client:
             print ("Train a classifier",self.kernel)
             if self.kernel == 'linear':
                 if not self.dual:
-                    self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive',verbose=1)
+                    model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive',verbose=1)
                     #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                    self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                    model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                 else:  
                     model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                     model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
