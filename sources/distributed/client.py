@@ -61,9 +61,9 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
 
         if (cmd == 1 or cmd ==5) and len(data) == 0:
             cont = True
+            print ("Truing again with cmd: ", cmd)
         else:
             cont = False
-            print ("Truing again with cmd: ", cmd)
     return data  
 
 def get_ping(client):
