@@ -50,7 +50,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect(addr)
         sock.sendall(bytes(cmd_str))
-        try    
+        try:    
             msg = sock.recv(BUFFER_SIZE)
             while msg:
                 data += msg
