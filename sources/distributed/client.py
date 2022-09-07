@@ -238,9 +238,11 @@ class Client:
             try:
                 print ("fit", self.addr)
                 data = command(5,addr=self.addr)
+            
                 arr_data = bytearray(data)
-                q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little',signed=True)
-                q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little',signed=True)
+                size = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
+                q_idle = int.from_bytes(bytes(arr_data[8:16]),byteorder='little')
+                q_run = int.from_bytes(bytes(arr_data[16:]),byteorder='little')
                 print("Check the queue status (idle/run):",arr_data,q_idle,q_run)
                 
                 data = command(1,addr=self.addr)
@@ -286,8 +288,8 @@ class Client:
                 else:
                     data = command(5,addr=self.addr)    
                     arr_data = bytearray(data)
-                    q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
-                    q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little')
+                    q_idle = int.from_bytes(bytes(arr_data[8:16]),byteorder='little')
+                    q_run = int.from_bytes(bytes(arr_data[16:]),byteorder='little')
                     print("Check the queue status (idle/run):",q_idle,q_run)
                     if q_idle == 0 and q_run == 0:
                         self.id = -1
