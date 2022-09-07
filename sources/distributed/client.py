@@ -42,22 +42,28 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
         package[0]  = int(9).to_bytes(8,byteorder='little')
 
     cmd_str =  b''.join(package)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(addr)
-    sock.sendall(bytes(cmd_str))
-    data = b''  
-    try:  
-        msg = sock.recv(BUFFER_SIZE)
-
-
-
-        while msg:
-            data += msg
+    cont = True
+    while cont:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.connect(addr)
+        sock.sendall(bytes(cmd_str))
+        data = b''  
+        try:  
             msg = sock.recv(BUFFER_SIZE)
-    except Exception as e:
-        print(cmd, str(e))
+            while msg:
+                data += msg
+                msg = sock.recv(BUFFER_SIZE)
+        except Exception as e:
+            print(cmd, str(e))
+        time.sleep(1)    
         
-    sock.close() 
+        sock.close()
+
+        if (cmd == 1 or cmd ==5) and len(data) == 0:
+            cont = True
+        else:
+            cont = False
+            print ("Truing again with cmd: ", cmd)
     return data  
 
 def get_ping(client):
