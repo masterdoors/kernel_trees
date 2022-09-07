@@ -61,12 +61,12 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     sock.close() 
     return data  
 
-def get_ping(id_,addr):
+def get_ping(client):
     def ping(event):
         while True:
             #print("ping",os.getpid(), self.id)
-            if id_ > -1:
-                command(3, id=id_,addr=addr)
+            if client.id > -1:
+                command(3, id=client.id,addr=client.addr)
             time.sleep(3)
             if event.is_set():
                 break        
@@ -411,7 +411,7 @@ class Client:
 
                 zc = 0 
                 while next:
-                    print(zc)
+                    
                     next = False
                     zc += 1  
                     for i in range(p.shape[0]):
@@ -442,10 +442,10 @@ class Client:
   
         else:
             for zc in range(1,len(class_counts),1):
-                print (zc)
+         
                 a = numpy.hstack([-numpy.ones((zc,)),numpy.ones((len(class_counts) - zc,))])
                 for p in multiset_permutations(a):
-                    print(len(p))
+                    
                     p = numpy.asarray(p)
                     left_counts = class_counts[p < 0, 1]
                     right_counts = class_counts[p > 0, 1]
@@ -586,7 +586,7 @@ def run_problem():
                      dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
         try:
             event = Event()
-            thread_ping = Thread(target = get_ping(client.id, client.addr), name="ping",args=(event,))
+            thread_ping = Thread(target = get_ping(client), name="ping",args=(event,))
             thread_ping.start()
                       
             client.fit()
