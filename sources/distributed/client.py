@@ -239,9 +239,9 @@ class Client:
                 print ("fit", self.addr)
                 data = command(5,addr=self.addr)
                 arr_data = bytearray(data)
-                q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
-                q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little')
-                print("Check the queue status (idle/run):",q_idle,q_run)
+                q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little',signed=True)
+                q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little',signed=True)
+                print("Check the queue status (idle/run):",arr_data,q_idle,q_run)
                 
                 data = command(1,addr=self.addr)
                 if len(data) > 0:
