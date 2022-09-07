@@ -284,7 +284,8 @@ class Client:
                     q_idle = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
                     q_run = int.from_bytes(bytes(arr_data[8:]),byteorder='little')
                     if q_idle == 0 and q_run == 0:
-                        self.stop = True
+                        self.id = -1
+                        break
             finally:        
                 self.id = -1 
 
@@ -510,7 +511,7 @@ class Client:
             print ("Train a classifier",self.kernel)
             if self.kernel == 'linear':
                 if not self.dual:
-                    model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive',verbose=1)
+                    model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
                     #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                     model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                 else:  
