@@ -219,6 +219,8 @@ class Client:
         self.eps = 0.0000001
         self.x = x
         self.Y = Y
+
+        print(numpy.unique(Y))
         self.addr = ("keen.isa.ru",5555) 
         self.id = -1
         self.max_depth = max_depth
@@ -395,6 +397,7 @@ class Client:
         min_gini = self.max_criteria
         min_p = []
         print ("Set classes to side")
+
         if len(class_counts) > 13:
         #Greedy
             print (class_counts)
