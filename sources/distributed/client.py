@@ -22,7 +22,7 @@ from flask import Flask, flash, request, redirect
 
 import socket
 
-BUFFER_SIZE = 1024*32
+BUFFER_SIZE = 1024*128
 
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
   
@@ -48,6 +48,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     while cont:
      
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      
         sock.connect(addr)
         sock.sendall(bytes(cmd_str))
         try:    
