@@ -46,27 +46,32 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     data = b''
     
     while cont:
-     
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #sock.settimeout(100)
-        sock.connect(addr)
-        sock.sendall(bytes(cmd_str))
-        try:    
-            msg = sock.recv(BUFFER_SIZE)
-            while msg:
-                data += msg
-                msg = sock.recv(BUFFER_SIZE)
-        except Exception as e:
-            print(cmd, str(e))
-        time.sleep(1)    
+        cont = False
+        try:   
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            #sock.settimeout(100)
+            sock.connect(addr)
+            sock.sendall(bytes(cmd_str))
+            if cmd != 4 and cmd != 2 and cmd != 3:
+                try:    
+                    msg = sock.recv(BUFFER_SIZE)
+                    while msg:
+                        data += msg
+                        msg = sock.recv(BUFFER_SIZE)
+                except Exception as e:
+                    print(cmd, str(e))
+                    time.sleep(1)
+                    cont = True
         
-        sock.close()
-        
-        if (cmd == 1 or cmd ==5) and len(data) == 0:
+       
+            if (cmd == 1 or cmd ==5) and len(data) == 0:
+                cont = True
+                print ("Trying again with cmd: ", cmd)
+        except:
             cont = True
-            print ("Trying again with cmd: ", cmd)
-        else:
-            cont = False
+            time.sleep(1)
+        finally:
+            sock.close()
     return data  
 
 def get_ping(client):
