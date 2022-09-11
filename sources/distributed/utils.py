@@ -73,9 +73,9 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
             time.sleep(1)
         finally:
             sock.close()
-        if tries > 3:
+        if tries > 10:
             break
-    if tries > 3:
+    if tries > 10:
         raise Exception("cmd: too many tries")
     return data  
 
