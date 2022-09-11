@@ -12,14 +12,16 @@ import requests
 import grequests
 from tempfile import TemporaryFile
 
-BUFFER_SIZE = 1024*32
+BUFFER_SIZE = 1024*128
 
 from scipy.sparse import csr_matrix
 
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
+    
     package = [] 
     package.append(0)
     package.append(cmd)
+    print(cmd,id,addr)
     if cmd == 1 or cmd == 5:
         package[0] = int(cmd).to_bytes(8,byteorder='little')
     package[1] = int(cmd).to_bytes(1,byteorder='little') 
@@ -33,21 +35,48 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
         package[0]  = int(9).to_bytes(8,byteorder='little')
 
     cmd_str =  b''.join(package)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(addr)
-    sock.sendall(bytes(cmd_str))  
-    try:  
-        msg = sock.recv(BUFFER_SIZE)
+    if cmd == 2:
+      
+        print (cmd,len(cmd_str),9 + len(mask))
+    data = []
+    retry = True
+    tries = 0
+    while retry:
+        retry = False
+        tries += 1
+        try:
+             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+             sock.connect(addr)
+             try:
+                 sock.sendall(bytes(cmd_str))
+             except Exception as e:    
+                 print ("CommandL error while sendall", e)
+                 retry = True
+                 time.sleep(1)
+                 
+             if cmd != 2 and cmd != 4 and cmd != 3:    
+                try:  
+                    msg = sock.recv(BUFFER_SIZE)
+                    data = b''
 
-        data = b''
-
-        while msg:
-            data += msg
-            msg = sock.recv(BUFFER_SIZE)
-    except Exception as e:
-        print("Error while trying to read the command result. cmd: ",cmd,e)
-     
-    sock.close() 
+                    while msg:
+                        data += msg
+                        msg = sock.recv(BUFFER_SIZE)
+                except Exception as e:
+                    print("Error while trying to read the command result. cmd: ",cmd,e)
+                    retry = True
+                    time.sleep(1)
+             
+        except Exception as e:
+            print("Error while sending a command: ", cmd, e)
+            retry = True
+            time.sleep(1)
+        finally:
+            sock.close()
+        if tries > 3:
+            break
+    if tries > 3:
+        raise Exception("cmd: too many tries")
     return data  
 
 def loadClusterCfg(cfg_path):
@@ -126,32 +155,37 @@ def prepareProblem(func):
                 xfile_name = id_ + "_x.npy"
                 yfile_name = id_ + "_y.npy"
                 
-                numpy.save(xfile_name,Y)
-                numpy.save(yfile_name,numpy.asarray(x.todense())) 
-                
+                numpy.save(yfile_name,Y)
+                numpy.save(xfile_name,numpy.asarray(x.todense())) 
+         
 
                 
                 try:     
-                    server_cmd = "./queue 5555 " + res_name
+                    server_cmd = "./queue 5555 " + res_name + " > queue.log"
                     p = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-                    print ("Run queue")                  
+                    print ("Run queue")
+
+                    func(tree,sample_weight,addr)                    
                     
-                    rss = [] 
+                except Exception as e:
+                    print("func():",e)
+                rss = []    
+                try:    
                     for srv in clusterCfg['servers']:
+
                         url = srv['host'] + ":" + str(srv['port']) + "/run_problem"
+                        print (url)
                         for _ in range(srv['max_threads']):
                             files = {'features': open(xfile_name,'rb'), 'labels': open(yfile_name,'rb')}
                             values = {'problem':yaml.dump(problem),'id':id_}                            
-                            rss.append(grequests.post(url,files=files, data=values,timeout=9000))
+                            rss.append(grequests.post(url,files=files, data=values,timeout=9000,allow_redirects=False))
                     
-                    time.sleep(0.5)        
-                    func(tree,sample_weight,addr)        
                     grequests.map(rss)
                     p.wait()
                     print ("Queue is stopped")
                     
                 except Exception as e:
-                    print(e)
+                    print("Request to the traineers:", url,e)
                     
                 os.remove(xfile_name)
                 os.remove(yfile_name)    

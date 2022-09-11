@@ -44,9 +44,10 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     cmd_str =  b''.join(package)
     cont = True
     data = b''
-    
+    tries = 0    
     while cont:
         cont = False
+        tries += 1
         try:   
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             #sock.settimeout(100)
@@ -72,6 +73,10 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
             time.sleep(1)
         finally:
             sock.close()
+        if tries > 3:
+            break
+    if tries > 3:
+        raise Exception("cmd: too muny retries")
     return data  
 
 def get_ping(client):
