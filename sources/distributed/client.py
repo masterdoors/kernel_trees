@@ -88,7 +88,7 @@ def get_ping(client):
             #print("ping",os.getpid(), self.id)
             if client.id > -1:
                 command(3, id=client.id,addr=client.addr)
-            time.sleep(3)
+            time.sleep(15)
             if event.is_set():
                 break        
     return ping
