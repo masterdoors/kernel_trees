@@ -30,7 +30,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     package.append(0)
     package.append(cmd)
     if cmd == 1 or cmd == 5:
-        package[0] = int(cmd).to_bytes(8,byteorder='little')
+        package[0] = int(9).to_bytes(8,byteorder='little')
     package[1] = int(cmd).to_bytes(1,byteorder='little') 
     if cmd == 2 or cmd == 4:
         if mask is not None:

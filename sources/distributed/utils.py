@@ -21,9 +21,9 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     package = [] 
     package.append(0)
     package.append(cmd)
-    print(cmd,id,addr)
+    #print(cmd,id,addr)
     if cmd == 1 or cmd == 5:
-        package[0] = int(cmd).to_bytes(8,byteorder='little')
+        package[0] = int(9).to_bytes(8,byteorder='little')
     package[1] = int(cmd).to_bytes(1,byteorder='little') 
     if cmd == 2 or cmd == 4:
         if mask is not None:
@@ -35,9 +35,9 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
         package[0]  = int(9).to_bytes(8,byteorder='little')
 
     cmd_str =  b''.join(package)
-    if cmd == 2:
+    #if cmd == 2:
       
-        print (cmd,len(cmd_str),9 + len(mask))
+    #    print (cmd,len(cmd_str),9 + len(mask))
     data = []
     retry = True
     tries = 0
@@ -164,7 +164,7 @@ def prepareProblem(func):
                     server_cmd = "./queue 5555 " + res_name + " > queue.log"
                     p = subprocess.Popen(server_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
                     print ("Run queue")
-
+                    time.sleep(5)
                     func(tree,sample_weight,addr)                    
                     
                 except Exception as e:
