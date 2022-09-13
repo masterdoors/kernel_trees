@@ -47,7 +47,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     tries = 0    
     while cont:
         cont = False
-        tries += 1
+        
         try:   
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             #sock.settimeout(100)
@@ -62,6 +62,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
                 except Exception as e:
                     print(cmd, str(e))
                     time.sleep(1)
+                    tries += 1
                     cont = True
         
        
@@ -71,6 +72,7 @@ def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
         except:
             cont = True
             time.sleep(1)
+            tries += 1
         finally:
             sock.close()
         if tries > 10:
