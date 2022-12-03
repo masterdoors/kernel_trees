@@ -12,3 +12,7 @@ dropout_low: 0.
 dropout_high: 1.0
 balance: True
 criteria: gain
+db_name: work_queue
+db_host: localhost
+res_name: res_queue
+res_host: localhost

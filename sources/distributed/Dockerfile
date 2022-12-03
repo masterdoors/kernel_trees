@@ -14,6 +14,14 @@ RUN pip install regex
 RUN pip install  sympy
 RUN pip install  pyyaml
 RUN pip install  scipy
+
+RUN pip install redis
+RUN pip install types-redis
+RUN pip install tox
+RUN pip install mypy
+RUN pip install black
+RUN pip install flake8
+
 RUN python -m pip install -U cython
 RUN python -m pip install -U numpy 
 RUN python -m pip install Flask==2.2.2
@@ -28,8 +36,8 @@ RUN mkdir /tmp/kernel_trees && \
     git clone https://github.com/masterdoors/kernel_trees /tmp/kernel_trees && \
 #    mkdir /tmp/sklearn && \
 #    git clone --branch 0.22.X  https://github.com/scikit-learn/scikit-learn.git /tmp/sklearn && \
-    cp /tmp/kernel_trees/thirdparty/base.py /tmp/sklearn/sklearn/svm/base.py && \
-    cp /tmp/kernel_trees/thirdparty/classes.py	/tmp/sklearn/sklearn/svm/classes.py && \
+#    cp /tmp/kernel_trees/thirdparty/base.py /tmp/sklearn/sklearn/svm/base.py && \
+#    cp /tmp/kernel_trees/thirdparty/classes.py	/tmp/sklearn/sklearn/svm/classes.py && \
     #cp /tmp/kernel_trees/thirdparty/linear.cpp	/tmp/sklearn/sklearn/svm/src/liblinear/linear.cpp  && \
     #cp /tmp/kernel_trees/thirdparty/linear.h  /tmp/sklearn/sklearn/svm/src/liblinear/linear.h  && \
     #cp /tmp/kernel_trees/thirdparty/liblinear_helper.c  /tmp/sklearn/sklearn/svm/src/liblinear/liblinear_helper.c  && \
@@ -60,10 +68,12 @@ VOLUME data
 
 #RUN rm -rf /etc/apache2/sites-enabled/000-default.conf
 
+RUN mkdir /var/www
 RUN cp -rf /tmp/kernel_trees/sources/distributed /var/www/
 
 ENV LC_ALL=C.UTF-8
 ENV LANG=C.UTF-8
 
-ENTRYPOINT ['python']
-CMD ["www/distributed/client.py"]
+#CMD ["apache2ctl","-D","FOREGROUND"]
+
+CMD ["/usr/bin/python","/var/www/distributed/client.py"]

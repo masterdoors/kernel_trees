@@ -24,6 +24,39 @@ import socket
 
 BUFFER_SIZE = 1024*128
 
+class BaseCmd:
+    def __init__(cmd, db, res):
+        self.cmd = cmd
+        self.db = db
+        self.res = res
+    
+    def __str__():
+        return str(pickle.dumps(self, 0))
+
+    def execute():
+        if self.cmd == 1: 
+            item = self.db.lease(lease_secs=10, block=True, timeout=2) 
+            if item is not None:
+                itemstr = item.decode("utf-8")
+                self.db.complete(item)
+
+class Cmd(BaseCmd):
+    def __init__(cmd, mask, db, res):
+        super().__init__(cmd, db, res)
+        self.mask = mask
+
+    def execute():
+        if self.cmd == 2:
+            try:
+                self.db.push(self.mask)
+            except:
+                print("Data are already in the queue")
+        else:
+            if self.cmd == 4:
+                if not self.db.empty():
+                    self.db.complete(item)
+                 self.res.push(self.mask)
+
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
   
     package = [] 
@@ -206,7 +239,7 @@ class Client:
 
     def __init__(self, x,Y,n_classes,class_max, kernel='linear', max_depth=1,\
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,max_iter=1000,gamma=1000.,intercept_scaling=1.,dropout_low=0.1,\
-                 dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini",class_map={},class_map_inv={}):
+                 dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini",class_map={},class_map_inv={}, db = None, res = None):
         if criteria == "gain":
             self.criteria = self.criteriaIG
             self.criteria_row = self.criteriaIGrow
@@ -246,6 +279,8 @@ class Client:
         self.id = -1
         self.max_depth = max_depth
         self.stop = False
+        self.db = db
+        self.res = res 
 
 
     def run_node(self):
@@ -260,13 +295,14 @@ class Client:
             try:
                 print ("fit", self.addr)
                                 
-                data = command(1,addr=self.addr)
+                #data = command(1,addr=self.addr)
+                data = BaseCmd(1,self.db, self.res).execute() 
                 if len(data) > 0:
                     ###get data to process
                     arr_data = bytearray(data)
                     size = int.from_bytes(bytes(arr_data[:8]),byteorder='little')
                     self.id = int.from_bytes(bytes(arr_data[8:16]),byteorder='little',signed=True)
-                    command(3, id=self.id,addr=self.addr)
+                    #command(3, id=self.id,addr=self.addr)
                     parId = int.from_bytes(bytes(arr_data[16:24]),byteorder='little',signed=True)
                     depth = int.from_bytes(bytes(arr_data[24:25]),byteorder='little')
                     side =  int.from_bytes(bytes(arr_data[25:26]),byteorder='little')
@@ -292,14 +328,17 @@ class Client:
                             sample_weightL[0,colsL] = 1       
                             sample_weightR[0,colsR] = 1  
                             if not self.clearNode(self.Y, sample_weightL) and numpy.count_nonzero(sample_weightL) > 1: 
-                                command(2,self.id,mask= (depth + 1).to_bytes(1,byteorder='little') + int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weightL) ,addr=self.addr)  
+                                #command(2,self.id,mask= (depth + 1).to_bytes(1,byteorder='little') + int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weightL) ,addr=self.addr)  
+                                Cmd(2,(depth + 1).to_bytes(1,byteorder='little') + int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weightL),self.db, self.res).execute()
                                 print (os.getpid(),"Load left task")
                             if not self.clearNode(self.Y, sample_weightR) and numpy.count_nonzero(sample_weightR) > 1: 
-                                command(2,self.id,mask= (depth + 1).to_bytes(1,byteorder='little') + int(1).to_bytes(1,byteorder='little') + pickle.dumps(sample_weightR),addr=self.addr)
+                                #command(2,self.id,mask= (depth + 1).to_bytes(1,byteorder='little') + int(1).to_bytes(1,byteorder='little') + pickle.dumps(sample_weightR),addr=self.addr)
+                                Cmd(2,(depth + 1).to_bytes(1,byteorder='little') + int(1).to_bytes(1,byteorder='little') + pickle.dumps(sample_weightR), self.db, self,res).execute()
                                 print (os.getpid(),"Load right task")
                                 
                     print ("Mark ", os.getpid(),self.id, " as done...")
-                    command(4, self.id,pickle.dumps((model,feature_weights,p0,p1,side,self.class_max)),addr=self.addr)
+                    #command(4, self.id,pickle.dumps((model,feature_weights,p0,p1,side,self.class_max)),addr=self.addr)
+                    Cmd(4,pickle.dumps((model,feature_weights,p0,p1,side,self.class_max)))
                 else:
                     data = command(5,addr=self.addr)    
                     arr_data = bytearray(data)
@@ -611,10 +650,18 @@ def run_problem():
         max_depth = cfg.get('max_depth',1)
         n_classes = cfg.get('n_classes',2)
         class_max = cfg.get('class_max',1)
+        
+        db_name = cfg.get('db_name','work_queue')
+        db_host = cfg.get('db_host','localhost')
+        res_name = cfg.get('res_name','res_queue')
+        res_host = cfg.get('res_host','localhost') 
+
+        db = rediswq.RedisWQ(name=db_name, host=db_host)
+        res = rediswq.RedisWQ(name=res_name, host=res_host)
 
         client = Client(x,Y,n_classes,class_max, kernel=kernel, max_depth=max_depth,\
                      sample_ratio=sample_ratio, feature_ratio=feature_ratio,dual=dual,C=C,tol=tol,max_iter=max_iter,dropout_low=dropout_low, \
-                     dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv)
+                     dropout_high=dropout_high, balance=balance, criteria=criteria,class_map=class_map,class_map_inv=class_map_inv,db,res)
         try:
             event = Event()
             thread_ping = Thread(target = get_ping(client), name="ping",args=(event,))

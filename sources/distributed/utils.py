@@ -10,11 +10,51 @@ import uuid
 
 import requests
 import grequests
+import rediswq
 from tempfile import TemporaryFile
 
 BUFFER_SIZE = 1024*128
 
 from scipy.sparse import csr_matrix
+
+#1 1 CMD - get task
+#5 1 CMD - ping
+#2 9+LEN CMD ID MASK - send task
+#4 9+LEN CMD ID MASK - save result
+#3 9 CMD ID - mark as in process
+
+class BaseCmd:
+    def __init__(cmd, db, res):
+        self.cmd = cmd
+        self.db = db
+        self.res = res
+    
+    def __str__():
+        return str(pickle.dumps(self, 0))
+
+    def execute():
+        if self.cmd == 1: 
+            item = self.db.lease(lease_secs=10, block=True, timeout=2) 
+            if item is not None:
+                itemstr = item.decode("utf-8")
+                self.db.complete(item)
+
+class Cmd(BaseCmd):
+    def __init__(cmd, mask, db, res):
+        super().__init__(cmd, db, res)
+        self.mask = mask
+
+    def execute():
+        if self.cmd == 2:
+            try:
+                self.db.push(self.mask)
+            except:
+                print("Data are already in the queue")
+        else:
+            if self.cmd == 4:
+                if not self.db.empty():
+                    self.db.complete(item)
+                self.res.push(self.mask)
 
 def command(cmd, id=-1, mask=None,addr=("localhost",5555)):
     

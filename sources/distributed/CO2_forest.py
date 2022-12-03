@@ -25,9 +25,11 @@ from numpy import save
 import uuid
 import numpy
 from utils import readResultFile
-from utils import command
+from utils import BaseCmd,Cmd 
 from utils import loadClusterCfg
 import pickle
+
+import time
        
 def probber(uuids, shapex,tree,stat_only):
         dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
@@ -49,8 +51,9 @@ def fitter_(self,sample_weight,addr):
         gamma=self.gamma,intercept_scaling=self.intercept_scaling,dropout_low=self.dropout_low,dropout_high=self.dropout_high,noise=self.noise,cov_dr=self.cov_dr, criteria = self.criteria)
         self.trees.append(tree)
     
-    for _ in self.trees: 
-        command(2,-1,mask= int(1).to_bytes(1,byteorder='little') +  int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weight),addr=addr)
+    for _ in self.trees:
+        #command(2,-1,mask= int(1).to_bytes(1,byteorder='little') +  int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weight),addr=addr)
+        Cmd(2,int(1).to_bytes(1,byteorder='little') +  int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weight),self.db,self.res)
 
 class CO2_forest:
 
@@ -123,7 +126,8 @@ class CO2_forest:
                         
             for j,s in enumerate(self.trees[i].structure):
                 if s[0] == -1 or s[1] == -1:
-                    self.trees[i].leaves.append(j)                       
+                    self.trees[i].leaves.append(j)
+            print("Tree",i," with ", len(self.trees[i].leaves)," leaves")         
                             
     def predict(self,x):
         proba = self.predict_proba(x)    
@@ -171,7 +175,8 @@ class CO2_forest:
     def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000, cluster_cfg = 'servers.yml',
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,
-                 intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini'):
+                 intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini', db_name='work_queue',\
+                 db_host='localhost', res_name = 'res_queue', res_host = 'localhost'):
         self.criteria = criteria
         self.C = C
         self.min_samples_split = min_samples_split
@@ -197,6 +202,10 @@ class CO2_forest:
         self.res_name = "result.bin" 
         self.addr = ("localhost",5555)      
         self.cluster_cgf =  loadClusterCfg(cluster_cfg) 
-
         
-        
+        self.db = rediswq.RedisWQ(name=db_name, host=db_host)
+        self.res = rediswq.RedisWQ(name=res_name, host=res_host)
+        self.db_name = db_name
+        self.db_host = db_host
+        self.res_name = res_name
+        self.res_host = res_host
