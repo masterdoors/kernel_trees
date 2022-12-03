@@ -28,7 +28,7 @@ from utils import readResultFile
 from utils import BaseCmd,Cmd 
 from utils import loadClusterCfg
 import pickle
-
+import rediswq
 import time
        
 def probber(uuids, shapex,tree,stat_only):

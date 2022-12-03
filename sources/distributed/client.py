@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy
 import os
 import yaml
+import rediswq
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
