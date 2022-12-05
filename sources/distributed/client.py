@@ -26,15 +26,15 @@ import socket
 BUFFER_SIZE = 1024*128
 
 class BaseCmd:
-    def __init__(cmd, db, res):
+    def __init__(self,cmd, db, res):
         self.cmd = cmd
         self.db = db
         self.res = res
     
-    def __str__():
+    def __str__(self):
         return str(pickle.dumps(self, 0))
 
-    def execute():
+    def execute(self):
         if self.cmd == 1: 
             item = self.db.lease(lease_secs=10, block=True, timeout=2) 
             if item is not None:
@@ -42,11 +42,11 @@ class BaseCmd:
                 self.db.complete(item)
 
 class Cmd(BaseCmd):
-    def __init__(cmd, mask, db, res):
+    def __init__(self,cmd, mask, db, res):
         super().__init__(cmd, db, res)
         self.mask = mask
 
-    def execute():
+    def execute(self):
         if self.cmd == 2:
             try:
                 self.db.push(self.mask)
