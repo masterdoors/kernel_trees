@@ -58,6 +58,8 @@ import numpy
 from sympy.utilities.iterables import multiset_permutations
 #import linearSVM
 
+from sklearn.tree import DecisionTreeClassifier
+
 from numpy import isnan
 from scipy.sparse.csc import csc_matrix
 
@@ -68,20 +70,18 @@ import subprocess
 
 class DecisionStamp:
     
-    def estimateTetas(self,x,Y,x_):
+    def estimateTetas(self,x,Y):
         counts = self.n_classes
 
         self.Teta0 = zeros((counts))
         self.Teta1 = zeros((counts))
 
-        signs = self.stamp_sign(x,x_,sample = False)
-        
-        #print(unique(signs, return_counts=True))
+        signs = self.stamp_sign(x,sample = False)
 
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
             signs = signs.todense()
 
-        cl = asarray(multiply(signs,Y))
+        cl = asarray(multiply(signs,Y + 1))
 
         cl = cl[nonzero(cl)]
 
@@ -91,12 +91,12 @@ class DecisionStamp:
         lcount = bincount(neg_cl)
         rcount = bincount(pos_cl)
 
-        for i in range(len(lcount)):
-                self.Teta0[self.class_map[i]] += float(lcount[i])
+        for i in range(1,len(lcount)):
+                self.Teta0[self.class_map[i - 1]] += float(lcount[i])
 
 
-        for i in range(len(rcount)):
-                self.Teta1[self.class_map[i]] += float(rcount[i])
+        for i in range(1,len(rcount)):
+                self.Teta1[self.class_map[i - 1]] += float(rcount[i])
 
         
     def delta(self,H,Y):
@@ -211,8 +211,8 @@ class DecisionStamp:
         else:
             return 0.        
             
-    def calcGini(self,x,Y,x_, report = False):
-        signs = self.stamp_sign(x,x_)
+    def calcGini(self,x,Y, report = False):
+        signs = self.stamp_sign(x)
         
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
             signs = signs.todense()        
@@ -381,31 +381,25 @@ class DecisionStamp:
             sample_idx_ran = asarray(range(x.shape[0]))[sample_idx.reshape(-1)]
             Y_tmp = Y[sample_idx.reshape(-1)]
             x_tmp = csr_matrix(x[sample_idx.reshape(-1)],dtype=np.float32)
-            rng = random.default_rng(self.seed+int(x_tmp.sum()))
+            rng = random.default_rng(self.seed+abs(int(x_tmp.sum())))
 
             #sample X and Y
             if self.sample_ratio*x.shape[0] > 10:
                 #idxs =  random.permutation(x_tmp.shape[0])[:int(x_tmp.shape[0]*self.sample_ratio)]   
                 idxs = rng.integers(0, x_tmp.shape[0], int(x_tmp.shape[0]*self.sample_ratio)) #bootstrap
-                
+                  
                 to_add_cnt = numpy.unique(sample_idx_ran[idxs]) 
                 x_ = csr_matrix(x_tmp[idxs],dtype=np.float32)
                 Y_ = Y_tmp[idxs]
                     
                 diff_y = unique(Y_)
                 if diff_y.shape[0] > 1:
-                    orig_idxs = sample_idx_ran[idxs]
-                    self.sample_weight = orig_idxs #zeros(sample_weight.shape).astype(int8)
-                    #self.sample_weight[0, orig_idxs] = 1
                     x_tmp = x_
                     Y_tmp = Y_
                     #print ("sampling shape:",diff_y.shape[0])
-                else:
-                    self.sample_weight = sample_idx.flatten()    
             else:
                 to_add_cnt = sample_idx_ran
-                self.sample_weight = sample_idx.flatten()
-                
+
             if not (samp_counts is None): 
                 self.counts[to_add_cnt] += 1
             
@@ -582,15 +576,17 @@ class DecisionStamp:
                 #else:
                 if self.kernel == 'polynomial':
                     self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma)
-                    #x_tmp
-                    self.model.fit(x,H.reshape(-1),feature_weight=self.features_weight,samples=self.sample_weight,sample_weight=deltas)
+                    self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
                 else:
                     if self.kernel == 'gaussian':
                         #self.model = None
-                        #x_tmp
-                        print("x:", x.shape)
+                        
                         self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
-                        self.model.fit(asarray(x.todense()),H.reshape(-1),feature_weight=self.features_weight,samples=self.sample_weight,sample_weight=deltas)                        
+                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)   
+                    else:
+                        if self.kernel == 'univariate':
+                            self.model = DecisionTreeClassifier( criterion= self.criteria_str, max_depth=1)
+                            self.model.fit(x_tmp,H.reshape(-1))
                         
                         #self.classifier_id = str(uuid.uuid4()) 
                         #numpy.save("vertexDataXt" + self.classifier_id,x_tmp.data)
@@ -631,7 +627,8 @@ class DecisionStamp:
             #end_time = time.time()
 
             #print ("Fit 1") #, end_time - start_time,"div:",side2count,"delta_uniques:",unique(deltas)) 
- 
+            
+            #print ("pass 1")
 
             if self.dropout_low > 0 or self.dropout_high < 1.:
                 #coeffs = np.abs(self.model.coef_).flatten()
@@ -669,18 +666,19 @@ class DecisionStamp:
                 else:
                     if self.kernel == 'polynomial':
                         self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                        self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
                     else:
                         if self.kernel == 'gaussian':
                             self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
-                            self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                            self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
 
+            #print ("pass 2")
             #print ("Fit 2")
-            gini_res = self.calcGini(x,Y,x)
+            gini_res = self.calcGini(x,Y)
             
             #print (gini_res,"|",gini_best)
 
-            self.estimateTetas(x_tmp, Y_tmp,x) 
+            self.estimateTetas(x_tmp, Y_tmp) 
 
             self.p0 = zeros(shape=(self.class_max + 1))
             self.p1 = zeros(shape=(self.class_max + 1))
@@ -706,6 +704,7 @@ class DecisionStamp:
                 #exp_1 = exp(self.p1)
                 #self.p1 = exp_1 / exp_1.sum()
             self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
+            #print ("pass 3")
             return gini_res    
 #public:
 
@@ -713,11 +712,14 @@ class DecisionStamp:
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,max_iter=1000,gamma=1000.,intercept_scaling=1.,dropout_low=0.1, dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini",seed=None):
         
         coin = randint(0,2)
+        
         if criteria == "gain":
+            self.criteria_str = 'entropy'
             self.criteria = self.criteriaIG
             self.criteria_row = self.criteriaIGrow
             self.max_criteria = 1e32
         else:
+            self.criteria_str = criteria
             self.criteria = self.criteriaGini 
             self.criteria_row = self.criteriaGinirow
             self.max_criteria = 1.0       
@@ -759,7 +761,7 @@ class DecisionStamp:
         self.instability = instability + 1./ self.prob
 
         if gres > 0:        
-            sign_matrix_full = self.stamp_sign(x,x)
+            sign_matrix_full = self.stamp_sign(x)
             sign_matrix = multiply(sample_weight.reshape(-1), sign_matrix_full)
             signs = asarray(sign_matrix)
             colsL = where(signs < 0.0)[0]
@@ -768,33 +770,58 @@ class DecisionStamp:
             sample_weightR[0,colsR] = 1  
             self.probL = float(sample_weightL.sum()) / sample_weight.shape[1]
             self.probR = float(sample_weightR.sum()) / sample_weight.shape[1]
-            print (sample_weightL.shape,sample_weightR.shape)
-        print ("pass 4")
+            #print (sample_weightL.shape,sample_weightR.shape)
+        #print ("pass 4")
         return gres, sample_weightL, sample_weightR        
     
-    def stamp_sign(self,x,x_,sample = True):
+    #def stamp_sign(self,x,sample = True):
+    #    if sample:
+    #        x = x[:,self.features_weight]
+    #    return sign(self.model.predict(x))
+    
+    def stamp_sign(self,x,sample = True):
         if sample:
             x = x[:,self.features_weight]
-        if self.kernel == "linear":    
+        cur_id = str(uuid.uuid4())     
+        
+        if self.model is not None:
             return sign(self.model.predict(x))
-        else:
-            return sign(self.model.predict(asarray(x.todense()),asarray(x_[self.sample_weight][:,self.features_weight].astype(numpy.float64).todense())))
-            
-    
-    def predict_stat(self,x,x_,sample = True):
+        else:           
+        
+            numpy.save("vertexDataX" + cur_id,x.data)
+            numpy.save("vertexIndX" + cur_id,x.indices)
+            numpy.save("vertexPtrX" + cur_id,x.indptr)
+
+            with open('shape'+ cur_id +'.pickle', 'wb') as f:
+                pickle.dump(x.shape, f)          
+
+            #self.model.save_to_file("vertex.model")
+            p = subprocess.Popen("python predict.py " + self.classifier_id + " " + cur_id, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+            p.wait()
+            signs = numpy.load('sign' + cur_id + '.npy')  
+
+            os.remove('sign' + cur_id + '.npy')
+            os.remove("vertexDataX" + cur_id + '.npy')
+            os.remove("vertexIndX" + cur_id + '.npy')
+            os.remove("vertexPtrX" + cur_id + '.npy')         
+            os.remove('shape'+ cur_id +'.pickle')          
+
+            return sign(signs)
+
+    def predict_stat(self,x,sample = True):
         res = zeros((x.shape[0],self.class_max + 1))
 
-        sgns = self.stamp_sign(x,x_,sample)
+        sgns = self.stamp_sign(x,sample)
 
         res[sgns < 0,1:] = self.Teta0
         res[sgns >=0,1:] = self.Teta1
 
         return res
 
-    def predict_proba(self,x,Y = None,x_=None,sample = True, use_weight = True, get_id=False):
+    def predict_proba(self,x,Y = None,sample = True, use_weight = True, get_id=False):
         res = zeros((x.shape[0],self.class_max + 1))
         leaf_ids =  zeros((x.shape[0],))
-        sgns = self.stamp_sign(x,x_,sample)
+        sgns = self.stamp_sign(x,sample)
 
         #print("chunk weight orig: ",self.p0, self.p1)
         #print("chunk weight: ",self.p0*self.chunk_weight, self.p1*self.chunk_weight) 
