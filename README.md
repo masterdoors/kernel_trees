@@ -3,7 +3,7 @@ Bagging on kernel trees
 
 Now it uses LinearSGD solver to train oblique splits. Please build and install the patched Scikit-learn first (from the thirdparty directory) if you want to use LinearSCV instead.
 
-sources - source files. 
+sources - source files: 
 
 --sources/cascade - adopted Deep Forest
 
