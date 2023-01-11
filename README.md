@@ -1,7 +1,7 @@
 # kernel_trees
 Bagging on kernel trees
 
-Now it uses LinearSGD solver to train oblique splits. Please build and install the patched Scikit-learn first (from the thirdparty directory) if you want to use LinearSCV instead.
+Now it uses LinearSGD solver to train oblique splits. Please build and install the patched Scikit-learn first (from the thirdparty directory) if you want to use LinearSVC instead.
 
 sources - source files: 
 
