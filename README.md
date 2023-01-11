@@ -16,3 +16,12 @@ sources - source files:
 tests - files and notebooks to run various experiments.
 
 thirdparty - files to patch Scikit-learn.
+
+# Dependences:
+1. numpy/scipy
+
+2. sympy
+
+3. joblib
+
+4. scikit-learn 
