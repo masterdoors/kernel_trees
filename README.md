@@ -31,6 +31,9 @@ thirdparty - files to patch Scikit-learn.
 1. Install dependences
 2. Copy sources/CO2_**.py into the working dir of your program.
 ## Kernel Forests with GPU acceleration
+1. Install the fork of ThunderSVM: https://github.com/masterdoors/thundersvm
+2. Install dependences
+3. Copy sources/GPU/*.py into the working dir of your program.
 ## Cascade Forests
 1. Install dependences
 2. Go to sources/cascade. Run setup.py install
