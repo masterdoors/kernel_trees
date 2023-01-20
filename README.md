@@ -18,13 +18,13 @@ tests - files and notebooks to run various experiments.
 thirdparty - files to patch Scikit-learn.
 
 # Dependences:
-1. numpy/scipy
+1. numpy/scipy 1.18.0/1.5.0 or higher
 
-2. sympy
+2. sympy 1.7 or higher
 
-3. joblib
+3. joblib 1.0.0 or higher
 
-4. scikit-learn 
+4. scikit-learn 0.22 or higher (use files from thirdparty if you want to utilize LinearSVC as the solver). 
 
 # Installation:
 ## Kernel Forests
