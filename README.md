@@ -25,3 +25,13 @@ thirdparty - files to patch Scikit-learn.
 3. joblib
 
 4. scikit-learn 
+
+# Installation:
+## Kernel Forests
+1. Install dependences
+2. Copy sources/CO2_**.py into the working dir of your program.
+## Kernel Forests with GPU acceleration
+## Cascade Forests
+1. Install dependences
+2. Go to sources/cascade. Run setup.py install
+3. Copy sources/CO2_**.py into the working dir of your program.
