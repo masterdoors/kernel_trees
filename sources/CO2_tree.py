@@ -119,7 +119,7 @@ class CO2Tree:
                         nnzR = count_nonzero(sample_weightR)
 
                         #print ("Balance: ",float(nnzL)/(nnzL + nnzR),float(nnzR)/(nnzL+nnzR),deth) 
-                        print ("pass 5")
+                        #print ("pass 5")
                         if nnzL > self.min_samples_leaf:      
                             #left
                             if not (sam_counts is None): 
@@ -213,7 +213,7 @@ class CO2Tree:
                         else:
                             leaf_id += 1
                 
-                print ("Tree is ready")
+                #print ("Tree is ready")
                  
             else:
                 print ("Wrong training set dimensionality")  
@@ -221,13 +221,13 @@ class CO2Tree:
             print ("X type must be scipy.sparse.csr_matrix and Y type must be numpy.ndarray")          
 
     
-    def predict(self,x, x_, preprocess = False):
-        probs = self.predict_proba(x, x_=x_, preprocess=reprocess)
+    def predict(self,x, preprocess = False):
+        probs = self.predict_proba(x, preprocess)
         
         return argmax(probs,axis=1)
    
     
-    def predict_proba(self,x, Y = None,x_ = None,preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
+    def predict_proba(self,x, Y = None,preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
         if isinstance(x,csr_matrix):
             res = zeros((x.shape[0], self.class_max + 1))
             leaf_ids = zeros((x.shape[0],))
@@ -246,7 +246,7 @@ class CO2Tree:
                     for index in old_indexes:
                         if index > -1:
                             x_shr = csr_matrix(x[old_indexes[index]],dtype=numpy.float32) 
-                            rs = self.nodes[index].stamp_sign(x_shr,x_)
+                            rs = self.nodes[index].stamp_sign(x_shr)
                             false_mask_left = zeros((x.shape[0],), dtype=bool)
                             false_mask_left[old_indexes[index]] = rs < 0
 
@@ -280,15 +280,15 @@ class CO2Tree:
                     if Y is not None:
                         cmp_r = []
                         for idx in final_estimators:
-                            res[final_estimators[idx]],cmp_res = self.nodes[idx].predict_proba(x[final_estimators[idx]],Y[final_estimators[idx]],x_,use_weight = use_weight)
+                            res[final_estimators[idx]],cmp_res = self.nodes[idx].predict_proba(x[final_estimators[idx]],Y[final_estimators[idx]],use_weight = use_weight)
                             cmp_r += cmp_res
                         return res, cmp_r    
                     else:    
                         for idx in final_estimators:
                             if return_leaf_id:
-                                res[final_estimators[idx]], leaf_ids[final_estimators[idx]] =  self.nodes[idx].predict_proba(x[final_estimators[idx]],x_ = x_,use_weight = use_weight, get_id = True)  
+                                res[final_estimators[idx]], leaf_ids[final_estimators[idx]] =  self.nodes[idx].predict_proba(x[final_estimators[idx]],use_weight = use_weight, get_id = True)  
                             else:    
-                                res[final_estimators[idx]] = self.nodes[idx].predict_proba(x[final_estimators[idx]],x_ = x_,use_weight = use_weight)
+                                res[final_estimators[idx]] = self.nodes[idx].predict_proba(x[final_estimators[idx]],use_weight = use_weight)
 
             if return_leaf_id:
                 return res,leaf_ids 
@@ -316,8 +316,8 @@ class CO2Tree:
             res[i] = self.nodes[lidx].prob
         return res  
     
-    def getIndicators(self,x, x_,noise = 0., balance_noise = False):
-        _, lids = self.predict_proba(x, Y = None,x_ = x_,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
+    def getIndicators(self,x, noise = 0., balance_noise = False):
+        _, lids = self.predict_proba(x, Y = None,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
         max_ind = int(lids.max()) + 1        
         self.leaves_number = 0
         for s in self.structure:

@@ -445,7 +445,7 @@ class DecisionStamp:
             
             if len(class_counts) > 13:
             #Greedy
-                for _ in range(len(class_counts)*len(class_counts)*15):
+                for _ in range(len(class_counts)*len(class_counts)):
                     lmin_gini = self.max_criteria
                     lmin_p = []
 

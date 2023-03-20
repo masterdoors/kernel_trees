@@ -54,8 +54,18 @@ def fitter(uuids,forest,shapex,seed_):
     #    k = 'polynomial'
     #else:
     #    k = 'gaussian'
+    
+    
+    if forest.univariate_ratio > 0.:
+        flag = numpy.random.choice([0,1], p=[forest.univariate_ratio,1 - forest.univariate_ratio])
+        if flag == 0:
+            k = 'univariate'
+        else:
+            k = forest.kernel    
+    else:
+        k = forest.kernel
         
-    tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
+    tree = co2.CO2Tree(C=forest.C , kernel=k,\
     tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = seed_,\
@@ -64,35 +74,25 @@ def fitter(uuids,forest,shapex,seed_):
     tree.fit(x,Y, preprocess = False)
     return tree
 
-def probber(uuids, shapex,shapex_,tree,stat_only,use_weight = True,withY = False):
+def probber(uuids, shapex,tree,stat_only,use_weight = True,withY = False):
         dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
         indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
         ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-        
-        dataX_ = load('/dev/shm/' + uuids + 'DataX_.npy',mmap_mode='r')
-        indX_ = load('/dev/shm/' + uuids + "IndX_.npy",mmap_mode='r')
-        ptrX_ = load('/dev/shm/' + uuids + "PtrX_.npy",mmap_mode='r')        
         
         if withY:
             Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
         else:
             Y = None            
         x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
-        x_ = csr_matrix((dataX_,indX_,ptrX_), shape=shapex_,dtype=numpy.float32, copy=False)  
-        print("tree x:",x_.shape)
-        return tree.predict_proba(x,Y,x_,preprocess = False,stat_only=stat_only,use_weight=use_weight)    
+        return tree.predict_proba(x,Y,preprocess = False,stat_only=stat_only,use_weight=use_weight)    
 
-def indicator(uuids, shapex,shapex_,tree,noise,balance_noise):
+def indicator(uuids, shapex,tree,noise,balance_noise):
     dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
     indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
     ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-    dataX_ = load('/dev/shm/' + uuids + 'DataX_.npy',mmap_mode='r')
-    indX_ = load('/dev/shm/' + uuids + "IndX_.npy",mmap_mode='r')
-    ptrX_ = load('/dev/shm/' + uuids + "PtrX_.npy",mmap_mode='r')     
 
-    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)  
-    x_ = csr_matrix((dataX_,indX_,ptrX_), shape=shapex_,dtype=numpy.float32, copy=False)      
-    return tree.getIndicators(x, x_,noise = noise, balance_noise = balance_noise)     
+    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
+    return tree.getIndicators(x, noise = noise, balance_noise = balance_noise)     
 
 def statter(tree):
     return tree.getWeights()    
@@ -348,7 +348,7 @@ class CO2_forest:
         cov_ = cov(numpy.hstack([probas[:,:,layer] for layer in range(1,probas.shape[2])]))                    
         return numpy.sqrt(cov_.sum())
     
-    def reinforce_prune(self,n,C,X,Y):
+    def reinforce_prune(self,n,C,X,Y,sample_weigths = None):
         lr = LogisticRegression(C=C,
                         fit_intercept=False,
                         solver='lbfgs',
@@ -370,15 +370,14 @@ class CO2_forest:
                         solver='lbfgs',
                         max_iter=100,
                         multi_class='multinomial', n_jobs=-1) 
-        lr.fit(lr_data, Y) 
+        lr.fit(lr_data, Y,sample_weigths) 
         self.lr = lr
                         
 
     #@profile
-    def fit(self,x,Y,x_test=None, Y_test=None,model=False):
+    def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
         
         x = csr_matrix(x)
-        self.x = deepcopy(x)
         
         self.le = LabelEncoder().fit(Y)
         Y = self.le.transform(Y)
@@ -404,7 +403,7 @@ class CO2_forest:
                 self.trees = pickle.load(f).trees     
         
         if self.reinforced:
-            self.reinforce_prune(self.prune_level,self.reC,x,Y)
+            self.reinforce_prune(self.prune_level,self.reC,x,Y,sample_weights)
             
         if self.cov_dr > 0:   
             with open('forest.pickle', 'wb') as f:
@@ -440,7 +439,7 @@ class CO2_forest:
                     pickle.dump(self, f)                 
                 
             inter_log("Done")   
-            
+    
     def    do_tests(self,x,Y,x_test, Y_test):       
             Y = self.le.transform(Y)
             Y_test = self.le.transform(Y_test)
@@ -741,21 +740,13 @@ class CO2_forest:
         
         save('/dev/shm/'+ uuids + "DataX",x.data)
         save('/dev/shm/'+ uuids + "IndX",x.indices)
-        save('/dev/shm/'+ uuids + "PtrX",x.indptr)      
-        
-        save('/dev/shm/'+ uuids + "DataX_",self.x.data)
-        save('/dev/shm/'+ uuids + "IndX_",self.x.indices)
-        save('/dev/shm/'+ uuids + "PtrX_",self.x.indptr)         
+        save('/dev/shm/'+ uuids + "PtrX",x.indptr)        
 
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,self.x.shape,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,t,noise,balance_noise) for t in self.trees)
 
         os.remove('/dev/shm/'+ uuids + "DataX.npy")
         os.remove('/dev/shm/'+ uuids + "IndX.npy")
-        os.remove('/dev/shm/'+ uuids + "PtrX.npy")  
-        
-        os.remove('/dev/shm/'+ uuids + "DataX_.npy")
-        os.remove('/dev/shm/'+ uuids + "IndX_.npy")
-        os.remove('/dev/shm/'+ uuids + "PtrX_.npy")         
+        os.remove('/dev/shm/'+ uuids + "PtrX.npy")        
         
         res = sorted(res, key=lambda tup: tup[1])
         indicators = [r for r,i in res]
@@ -796,26 +787,16 @@ class CO2_forest:
 
             save('/dev/shm/'+ uuids + "DataX",x.data)
             save('/dev/shm/'+ uuids + "IndX",x.indices)
-            save('/dev/shm/'+ uuids + "PtrX",x.indptr)       
-            
-            save('/dev/shm/'+ uuids + "DataX_",self.x.data)
-            save('/dev/shm/'+ uuids + "IndX_",self.x.indices)
-            save('/dev/shm/'+ uuids + "PtrX_",self.x.indptr)   
-            
-            print ("self.x:", self.x.shape)
+            save('/dev/shm/'+ uuids + "PtrX",x.indptr)        
 
             if Y is not None:
                 Y = self.le.transform(Y)
                 save('/dev/shm/'+ uuids + "DataY",Y) 
-            res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,self.x.shape,t,False,use_weight,Y is not None) for t in self.trees)
+            res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,t,False,use_weight,Y is not None) for t in self.trees)
 
             os.remove('/dev/shm/'+ uuids + "DataX.npy")
             os.remove('/dev/shm/'+ uuids + "IndX.npy")
             os.remove('/dev/shm/'+ uuids + "PtrX.npy")
-            
-            os.remove('/dev/shm/'+ uuids + "DataX_.npy")
-            os.remove('/dev/shm/'+ uuids + "IndX_.npy")
-            os.remove('/dev/shm/'+ uuids + "PtrX_.npy")            
 
             rr = []
             rs = []               
@@ -840,7 +821,9 @@ class CO2_forest:
         
     def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
-                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini',spatial_mul=1.0,reinforced = False, prune_level = 0.,reC=10,id_=0):
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
+                 gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0.,\
+                 criteria='gini',spatial_mul=1.0,reinforced = False, prune_level = 0.,reC=10,id_=0,univariate_ratio=0.0):
         self.criteria = criteria
         self.C = C
         self.min_samples_split = min_samples_split
@@ -867,6 +850,7 @@ class CO2_forest:
         self.reC = 10.
         self.reinforced = reinforced
         self.id_ = id_
+        self.univariate_ratio = univariate_ratio
 
 
 
