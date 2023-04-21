@@ -15,7 +15,7 @@ sources - source files:
 
 tests - files and notebooks to run various experiments.
 
-thirdparty - files to patch Scikit-learn.
+thirdparty - files to patch Scikit-learn (deprecated).
 
 # Dependences:
 1. numpy/scipy 1.18.0/1.5.0 or higher
@@ -24,7 +24,7 @@ thirdparty - files to patch Scikit-learn.
 
 3. joblib 1.0.0 or higher
 
-4. scikit-learn 0.22 or higher (use files from thirdparty if you want to utilize LinearSVC as the solver). 
+4. Fork of the scikit-learn 0.22 (use pip install git+https://github.com/masterdoors/scikit-learn to install). 
 
 # Installation:
 ## Kernel Forests
