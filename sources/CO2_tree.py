@@ -66,6 +66,9 @@ class CO2Tree:
                 #print "Already processed: ", self.processed_counter
                 self.old_processed_counter = self.processed_counter
         nnz = count_nonzero(sample_weight)
+        
+        with open("forest_mem_test.log","a") as f:
+            f.write("Tree: " +  str(self.seed) + " " + str(deth) + " " + str(len(self.nodes)) + "\n")
 
         if  self.max_deth is None or deth <= self.max_deth: 
             if nnz >= self.min_samples_split: 
@@ -73,22 +76,7 @@ class CO2Tree:
                     #print "deth:", deth
                     #balanced = True
                     cf = 1
-                    #if deth > 6:
-                    #    cf = 10
-                    #if deth < 3:
-                    #    ds = dst.DecisionStamp(self.n_classes,self.class_max, features_weight,\
-                    #                           'linear', self.sample_ratio,self.feature_ratio,\
-                    #                           self.dual,C/cf,tol,self.max_iter,self.gamma,self.intercept_scaling,self.dropout_low,self.dropout_high,balanced,self.noise,self.cov_dr, self.criteria)
-                    #else: 
-                    
-                    #id_ = numpy.random.randint(0,3)
-                    #if id_ == 0:
-                    #    k = 'polynomial'
-                    #else:    
-                    #    if id_ == 1:
-                    #        k = 'linear'
-                    #    else:
-                    #        k = 'gaussian' 
+
                     if deth < 3:
                         sample_ratio = 0.2 * self.sample_ratio
                     else:
@@ -221,13 +209,13 @@ class CO2Tree:
             print ("X type must be scipy.sparse.csr_matrix and Y type must be numpy.ndarray")          
 
     
-    def predict(self,x, preprocess = False):
-        probs = self.predict_proba(x, preprocess)
+    def predict(self,x, train_data, preprocess = False):
+        probs = self.predict_proba(x, train_data = train_data, preprocess = preprocess)
         
         return argmax(probs,axis=1)
    
     
-    def predict_proba(self,x, Y = None,preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
+    def predict_proba(self,x, Y = None,train_data = None, preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
         if isinstance(x,csr_matrix):
             res = zeros((x.shape[0], self.class_max + 1))
             leaf_ids = zeros((x.shape[0],))
@@ -246,7 +234,7 @@ class CO2Tree:
                     for index in old_indexes:
                         if index > -1:
                             x_shr = csr_matrix(x[old_indexes[index]],dtype=numpy.float32) 
-                            rs = self.nodes[index].stamp_sign(x_shr)
+                            rs = self.nodes[index].stamp_sign(x_shr, train_data)
                             false_mask_left = zeros((x.shape[0],), dtype=bool)
                             false_mask_left[old_indexes[index]] = rs < 0
 
@@ -280,15 +268,15 @@ class CO2Tree:
                     if Y is not None:
                         cmp_r = []
                         for idx in final_estimators:
-                            res[final_estimators[idx]],cmp_res = self.nodes[idx].predict_proba(x[final_estimators[idx]],Y[final_estimators[idx]],use_weight = use_weight)
+                            res[final_estimators[idx]],cmp_res = self.nodes[idx].predict_proba(x[final_estimators[idx]],Y[final_estimators[idx]],train_data=train_data,use_weight = use_weight)
                             cmp_r += cmp_res
                         return res, cmp_r    
                     else:    
                         for idx in final_estimators:
                             if return_leaf_id:
-                                res[final_estimators[idx]], leaf_ids[final_estimators[idx]] =  self.nodes[idx].predict_proba(x[final_estimators[idx]],use_weight = use_weight, get_id = True)  
+                                res[final_estimators[idx]], leaf_ids[final_estimators[idx]] =  self.nodes[idx].predict_proba(x[final_estimators[idx]],train_data=train_data,use_weight = use_weight, get_id = True)  
                             else:    
-                                res[final_estimators[idx]] = self.nodes[idx].predict_proba(x[final_estimators[idx]],use_weight = use_weight)
+                                res[final_estimators[idx]] = self.nodes[idx].predict_proba(x[final_estimators[idx]],train_data=train_data,use_weight = use_weight)
 
             if return_leaf_id:
                 return res,leaf_ids 
@@ -316,8 +304,8 @@ class CO2Tree:
             res[i] = self.nodes[lidx].prob
         return res  
     
-    def getIndicators(self,x, noise = 0., balance_noise = False):
-        _, lids = self.predict_proba(x, Y = None,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
+    def getIndicators(self,x, train_data = None,noise = 0., balance_noise = False):
+        _, lids = self.predict_proba(x, Y = None,train_data=train_data,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
         max_ind = int(lids.max()) + 1        
         self.leaves_number = 0
         for s in self.structure:

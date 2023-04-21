@@ -50,20 +50,20 @@ def fitter(uuids,forest,shapex,seed_):
     ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
     x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32,copy=False)
     Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
+    
     #if seed_ % 2 == 0:
     #    k = 'polynomial'
     #else:
     #    k = 'gaussian'
     
-    
-    if forest.univariate_ratio > 0.:
-        flag = numpy.random.choice([0,1], p=[forest.univariate_ratio,1 - forest.univariate_ratio])
-        if flag == 0:
-            k = 'univariate'
-        else:
-            k = forest.kernel    
-    else:
-        k = forest.kernel
+    #if forest.univariate_ratio > 0.:
+    #    flag = numpy.random.choice([0,1], p=[forest.univariate_ratio,1 - forest.univariate_ratio])
+    #    if flag == 0:
+    #        k = 'univariate'
+    #    else:
+    #        k = forest.kernel    
+    #else:
+    k = forest.kernel
         
     tree = co2.CO2Tree(C=forest.C , kernel=k,\
     tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
@@ -74,7 +74,7 @@ def fitter(uuids,forest,shapex,seed_):
     tree.fit(x,Y, preprocess = False)
     return tree
 
-def probber(uuids, shapex,tree,stat_only,use_weight = True,withY = False):
+def probber(uuids, shapex,train_shape,tree,stat_only,use_weight = True,withY = False):
         dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
         indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
         ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
@@ -84,15 +84,26 @@ def probber(uuids, shapex,tree,stat_only,use_weight = True,withY = False):
         else:
             Y = None            
         x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
-        return tree.predict_proba(x,Y,preprocess = False,stat_only=stat_only,use_weight=use_weight)    
+        
+        dataX = load('/dev/shm/' + uuids + 'trainDataX.npy',mmap_mode='r')
+        indX = load('/dev/shm/' + uuids + "trainIndX.npy",mmap_mode='r')
+        ptrX = load('/dev/shm/' + uuids + "trainPtrX.npy",mmap_mode='r')    
+        train_data = csr_matrix((dataX,indX,ptrX), shape=train_shape,dtype=numpy.float32,copy=False)
+    
+        return tree.predict_proba(x,Y,train_data, preprocess = False,stat_only=stat_only,use_weight=use_weight)    
 
-def indicator(uuids, shapex,tree,noise,balance_noise):
+def indicator(uuids, shapex,train_shape,tree,noise,balance_noise):
     dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
     indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
     ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
+    
+    dataX = load('/dev/shm/' + uuids + 'trainDataX.npy',mmap_mode='r')
+    indX = load('/dev/shm/' + uuids + "trainIndX.npy",mmap_mode='r')
+    ptrX = load('/dev/shm/' + uuids + "trainPtrX.npy",mmap_mode='r')    
+    train_data = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32,copy=False)    
 
-    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
-    return tree.getIndicators(x, noise = noise, balance_noise = balance_noise)     
+    x = csr_matrix((dataX,indX,ptrX), shape=train_shape,dtype=numpy.float32, copy=False)    
+    return tree.getIndicators(x, train_data, noise = noise, balance_noise = balance_noise)     
 
 def statter(tree):
     return tree.getWeights()    
@@ -378,6 +389,8 @@ class CO2_forest:
     def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
         
         x = csr_matrix(x)
+        
+        self.x = x
         
         self.le = LabelEncoder().fit(Y)
         Y = self.le.transform(Y)
@@ -740,13 +753,21 @@ class CO2_forest:
         
         save('/dev/shm/'+ uuids + "DataX",x.data)
         save('/dev/shm/'+ uuids + "IndX",x.indices)
-        save('/dev/shm/'+ uuids + "PtrX",x.indptr)        
+        save('/dev/shm/'+ uuids + "PtrX",x.indptr)      
+        save('/dev/shm/'+ uuids + "trainDataX",self.train_data.data)
+        save('/dev/shm/'+ uuids + "trainIndX",self.train_data.indices)
+        save('/dev/shm/'+ uuids + "trainPtrX",self.train_data.indptr)            
+        
 
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,train_data.shape,t,noise,balance_noise) for t in self.trees)
 
         os.remove('/dev/shm/'+ uuids + "DataX.npy")
         os.remove('/dev/shm/'+ uuids + "IndX.npy")
-        os.remove('/dev/shm/'+ uuids + "PtrX.npy")        
+        os.remove('/dev/shm/'+ uuids + "PtrX.npy")   
+        os.remove('/dev/shm/'+ uuids + "trainDataX.npy")
+        os.remove('/dev/shm/'+ uuids + "trainIndX.npy")
+        os.remove('/dev/shm/'+ uuids + "trainPtrX.npy")
+        
         
         res = sorted(res, key=lambda tup: tup[1])
         indicators = [r for r,i in res]
@@ -787,16 +808,23 @@ class CO2_forest:
 
             save('/dev/shm/'+ uuids + "DataX",x.data)
             save('/dev/shm/'+ uuids + "IndX",x.indices)
-            save('/dev/shm/'+ uuids + "PtrX",x.indptr)        
+            save('/dev/shm/'+ uuids + "PtrX",x.indptr)     
+            
+            save('/dev/shm/'+ uuids + "trainDataX",self.train_data.data)
+            save('/dev/shm/'+ uuids + "trainIndX",self.train_data.indices)
+            save('/dev/shm/'+ uuids + "trainPtrX",self.train_data.indptr)                 
 
             if Y is not None:
                 Y = self.le.transform(Y)
                 save('/dev/shm/'+ uuids + "DataY",Y) 
-            res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,t,False,use_weight,Y is not None) for t in self.trees)
+            res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,self.train_data.shape,t,False,use_weight,Y is not None) for t in self.trees)
 
             os.remove('/dev/shm/'+ uuids + "DataX.npy")
             os.remove('/dev/shm/'+ uuids + "IndX.npy")
             os.remove('/dev/shm/'+ uuids + "PtrX.npy")
+            os.remove('/dev/shm/'+ uuids + "trainDataX.npy")
+            os.remove('/dev/shm/'+ uuids + "trainIndX.npy")
+            os.remove('/dev/shm/'+ uuids + "trainPtrX.npy")
 
             rr = []
             rs = []               

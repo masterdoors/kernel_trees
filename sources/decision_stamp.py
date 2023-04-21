@@ -68,15 +68,17 @@ from sklearn.metrics import accuracy_score
 import subprocess
 #from memory_profiler import profile
 
+import psutil
+
 class DecisionStamp:
     
-    def estimateTetas(self,x,Y):
+    def estimateTetas(self,x,Y,train_data):
         counts = self.n_classes
 
         self.Teta0 = zeros((counts))
         self.Teta1 = zeros((counts))
 
-        signs = self.stamp_sign(x,sample = False)
+        signs = self.stamp_sign(x,train_data,sample = False)
 
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
             signs = signs.todense()
@@ -186,8 +188,6 @@ class DecisionStamp:
         pos_cl = abs(cl[cl >= 0.0]).astype(int64)
         neg_cl = abs(cl[cl < 0.0]).astype(int64)
         cl = abs(cl).astype(int64)
-        
-        #print cl
             
         gl = 0
         gr = 0
@@ -211,8 +211,8 @@ class DecisionStamp:
         else:
             return 0.        
             
-    def calcGini(self,x,Y, report = False):
-        signs = self.stamp_sign(x)
+    def calcGini(self,x,Y, train_data,report = False):
+        signs = self.stamp_sign(x,train_data)
         
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
             signs = signs.todense()        
@@ -380,21 +380,22 @@ class DecisionStamp:
             sample_idx = sample_weight > 0
             sample_idx_ran = asarray(range(x.shape[0]))[sample_idx.reshape(-1)]
             Y_tmp = Y[sample_idx.reshape(-1)]
-            x_tmp = csr_matrix(x[sample_idx.reshape(-1)],dtype=np.float32)
-            rng = random.default_rng(self.seed+abs(int(x_tmp.sum())))
+            #x_tmp = csr_matrix(x[sample_idx.reshape(-1)],dtype=np.float32)
+            rng = random.default_rng(self.seed)#+abs(int(x_tmp.sum())))
 
             #sample X and Y
             if self.sample_ratio*x.shape[0] > 10:
                 #idxs =  random.permutation(x_tmp.shape[0])[:int(x_tmp.shape[0]*self.sample_ratio)]   
-                idxs = rng.integers(0, x_tmp.shape[0], int(x_tmp.shape[0]*self.sample_ratio)) #bootstrap
+                idxs = rng.integers(0, sample_idx_ran.shape[0], int(sample_idx_ran.shape[0]*self.sample_ratio)) #bootstrap
                   
                 to_add_cnt = numpy.unique(sample_idx_ran[idxs]) 
-                x_ = csr_matrix(x_tmp[idxs],dtype=np.float32)
+                #x_ = csr_matrix(x_tmp[idxs],dtype=np.float32)
                 Y_ = Y_tmp[idxs]
                     
                 diff_y = unique(Y_)
                 if diff_y.shape[0] > 1:
-                    x_tmp = x_
+                    #x_tmp = x_
+                    sample_idx_ran = sample_idx_ran[idxs]
                     Y_tmp = Y_
                     #print ("sampling shape:",diff_y.shape[0])
             else:
@@ -407,7 +408,7 @@ class DecisionStamp:
                 return asarray([1 + unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
             
             #nonzero_idxs = unique(x_tmp.nonzero()[1]) 
-            counts_p = nu(csc_matrix(x_tmp))
+            counts_p = nu(csc_matrix(x[sample_idx_ran]))
             pos_idx = where(counts_p > 1)[0]
             
             if self.features_weight is not None:
@@ -415,7 +416,7 @@ class DecisionStamp:
                 pos_idx =list(set(pos_idx).intersection(set(f_idx)))
                 fw_size = int(self.features_weight[self.features_weight > 0].shape[0]* self.feature_ratio)
             else:
-                fw_size = int(x_tmp.shape[1] * self.feature_ratio)
+                fw_size = int(x.shape[1] * self.feature_ratio)
                 if fw_size > pos_idx.shape[0]:
                     fw_size = pos_idx.shape[0]
                 #fw_size = int(pos_idx.shape[0] * self.feature_ratio)
@@ -424,8 +425,8 @@ class DecisionStamp:
 
             if fw_size == 0:
                 return 0.
-
-            x_tmp = csr_matrix(x_tmp[:,self.features_weight],dtype=np.float32)
+            self.sample_weight = sample_idx_ran 
+            #x_tmp = csr_matrix(x_tmp[:,self.features_weight],dtype=np.float32)
             
             #print (x_tmp.shape,fw_size)
 
@@ -548,137 +549,47 @@ class DecisionStamp:
                 deltas = ones(shape=(H.shape[1]))  
             else:
                 deltas = (deltas / dm)*ratio 
-
-            #print ("deltas:",deltas.min(),deltas.max())
-
-            #start_time = time.time()
-
-            if self.noise > 0.:
-                #x_maxis = asarray(abs(x_tmp).max(axis=0).todense()).flatten()
-                gauss_noise = random.normal(ones((x_tmp.shape[1],),dtype=float),self.noise,(1,x_tmp.shape[1]))
-                x_tmp = csr_matrix(x_tmp.multiply(gauss_noise),dtype=np.float32)
-
-            #numpy.save("x_tmp",numpy.asarray(x_tmp.todense()))
-            #numpy.save("H",H.reshape(-1))
-            #numpy.save("deltas",deltas)
-            #time.sleep(10.0)
-            #return
+                
             try:
                 if self.kernel == 'linear':
                     if not self.dual:
                         self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
                         #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                        self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weight=deltas)
                     else:  
                         self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                        self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weight=deltas)
                     
                 #else:
                 if self.kernel == 'polynomial':
                     self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma)
-                    self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
+                    self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)  
                 else:
                     if self.kernel == 'gaussian':
-                        #self.model = None
-                        
                         self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)   
+                        self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
+                        out = self.model.predict(x[:, self.features_weight],x[sample_idx_ran][:, self.features_weight])
                     else:
                         if self.kernel == 'univariate':
                             self.model = DecisionTreeClassifier( criterion= self.criteria_str, max_depth=1)
-                            self.model.fit(x_tmp,H.reshape(-1))
+                            self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1))
                         
-                        #self.classifier_id = str(uuid.uuid4()) 
-                        #numpy.save("vertexDataXt" + self.classifier_id,x_tmp.data)
-                        #numpy.save("vertexIndXt" + self.classifier_id,x_tmp.indices)
-                        #numpy.save("vertexPtrXt" + self.classifier_id,x_tmp.indptr)
-                        #numpy.save("DataH" + self.classifier_id,H)                             
-                        #numpy.save("deltas" + self.classifier_id,deltas)
-
-                        #with open('shapet'+self.classifier_id+'.pickle', 'wb') as f:
-                        #    pickle.dump(x_tmp.shape, f)
-                            
-                        #if self.kernel == 'gaussian':
-                        #    kernel_ =  'rbf'     
-                        #else:
-                        #    kernel_ = 'linear'
-
-                        #p = subprocess.Popen("python train.py " + self.classifier_id + " " + kernel_, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)                        
-                        #p.wait()
-                        #os.remove("DataH" + self.classifier_id + ".npy")
-                        #os.remove("vertexDataXt" + self.classifier_id + ".npy")
-                        #os.remove("vertexIndXt" + self.classifier_id + ".npy")
-                        #os.remove("vertexPtrXt" + self.classifier_id + ".npy")                            
-                        #os.remove("deltas" + self.classifier_id + ".npy")
-                        #os.remove('shapet'+self.classifier_id+'.pickle')      
-                        
-                        #if not os.path.exists(self.classifier_id + ".model"):
-                        #    return 0.
-                        
-                            
             except Exception as exp:
                 print (str(exp))
-                print (x_tmp.shape)
+                #print (x_tmp.shape)
                 print(H)
                 print(traceback.format_exc())
                 return 0.            
-                        #print(1,unique(H),unique(Y_tmp,return_counts = True),accuracy_score(self.model.predict(x_tmp),H.reshape(-1)))
 
-            #end_time = time.time()
-
-            #print ("Fit 1") #, end_time - start_time,"div:",side2count,"delta_uniques:",unique(deltas)) 
+            print("Before Gini: ", Y_tmp.shape,self.features_weight.shape,psutil.virtual_memory())
             
-            #print ("pass 1")
-
-            if self.dropout_low > 0 or self.dropout_high < 1.:
-                #coeffs = np.abs(self.model.coef_).flatten()
-                
-                #max_coeff = coeffs.max()
-                #if max_coeff > 0:
-                #    coeffs = coeffs / max_coeff
-                
-                #den = np.exp(self.dropout_low*coeffs)
-                #p = den / den.sum()
-                #remain_idxs = np.random.choice(len(coeffs), size=len(coeffs), replace=True, p=p)                
-                max_coef = np.abs(self.model.coef_).max()
-                remain_idxs = ((np.abs(self.model.coef_) >= max_coef * self.dropout_low) & (np.abs(self.model.coef_) <= max_coef * self.dropout_high)).flatten() 
+            gini_res = self.calcGini(x[sample_idx_ran],Y_tmp,x)
             
-                #print ("old feat size: ", self.features_weight.shape[0])
-                #if self.features_weight[remain_idxs].shape[0] < 1:
-                #    remain_idxs = np.asarray([np.argmax(np.abs(self.model.coef_.flatten()), axis = 0)])  
-               
-            
-                self.features_weight = self.features_weight[remain_idxs]
-                #print ("new feat size: ", self.features_weight.shape[0]) 
-                x_tmp = x_tmp[:,remain_idxs]
+            print("After Gini: ", Y_tmp.shape,self.features_weight.shape,psutil.virtual_memory())
 
-                if self.kernel == 'linear':
-                    if not self.dual:
-                        self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
-                        #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
-                        #coef_tmp = self.model.coef_[0,remain_idxs].reshape(1,-1)
-                        #self.model.coef_ = coef_tmp 
-                    else:
-                        self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weight=deltas)
-
-                else:
-                    if self.kernel == 'polynomial':
-                        self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=3,gamma=self.gamma)
-                        self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-                    else:
-                        if self.kernel == 'gaussian':
-                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma)
-                            self.model.fit(x_tmp,H.reshape(-1),sample_weights=deltas)
-
-            #print ("pass 2")
-            #print ("Fit 2")
-            gini_res = self.calcGini(x,Y)
-            
             #print (gini_res,"|",gini_best)
 
-            self.estimateTetas(x_tmp, Y_tmp) 
+            self.estimateTetas(x[sample_idx_ran][:, self.features_weight], Y_tmp,x) 
 
             self.p0 = zeros(shape=(self.class_max + 1))
             self.p1 = zeros(shape=(self.class_max + 1))
@@ -761,7 +672,7 @@ class DecisionStamp:
         self.instability = instability + 1./ self.prob
 
         if gres > 0:        
-            sign_matrix_full = self.stamp_sign(x)
+            sign_matrix_full = self.stamp_sign(x,x)
             sign_matrix = multiply(sample_weight.reshape(-1), sign_matrix_full)
             signs = asarray(sign_matrix)
             colsL = where(signs < 0.0)[0]
@@ -774,39 +685,21 @@ class DecisionStamp:
         #print ("pass 4")
         return gres, sample_weightL, sample_weightR        
     
-    #def stamp_sign(self,x,sample = True):
-    #    if sample:
-    #        x = x[:,self.features_weight]
-    #    return sign(self.model.predict(x))
-    
-    def stamp_sign(self,x,sample = True):
-        if sample:
-            x = x[:,self.features_weight]
+    def stamp_sign(self,x,train_data, sample = True):
         cur_id = str(uuid.uuid4())     
         
-        if self.model is not None:
-            return sign(self.model.predict(x))
-        else:           
-        
-            numpy.save("vertexDataX" + cur_id,x.data)
-            numpy.save("vertexIndX" + cur_id,x.indices)
-            numpy.save("vertexPtrX" + cur_id,x.indptr)
-
-            with open('shape'+ cur_id +'.pickle', 'wb') as f:
-                pickle.dump(x.shape, f)          
-
-            #self.model.save_to_file("vertex.model")
-            p = subprocess.Popen("python predict.py " + self.classifier_id + " " + cur_id, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
-            p.wait()
-            signs = numpy.load('sign' + cur_id + '.npy')  
-
-            os.remove('sign' + cur_id + '.npy')
-            os.remove("vertexDataX" + cur_id + '.npy')
-            os.remove("vertexIndX" + cur_id + '.npy')
-            os.remove("vertexPtrX" + cur_id + '.npy')         
-            os.remove('shape'+ cur_id +'.pickle')          
-
-            return sign(signs)
+        if sample:
+            if self.kernel == 'linear' or self.kernel == 'univariate':
+                return sign(self.model.predict(x[:,self.features_weight]))
+            else:  
+                res = self.model.predict(x[:,self.features_weight], train_data[self.sample_weight][:,self.features_weight])
+                return sign(res)
+        else:
+            if self.kernel == 'linear' or self.kernel == 'univariate':
+                return sign(self.model.predict(x))
+            else:  
+                res = self.model.predict(x, train_data[self.sample_weight][:,self.features_weight])
+                return sign(res)            
 
     def predict_stat(self,x,sample = True):
         res = zeros((x.shape[0],self.class_max + 1))
@@ -818,10 +711,10 @@ class DecisionStamp:
 
         return res
 
-    def predict_proba(self,x,Y = None,sample = True, use_weight = True, get_id=False):
+    def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
         res = zeros((x.shape[0],self.class_max + 1))
         leaf_ids =  zeros((x.shape[0],))
-        sgns = self.stamp_sign(x,sample)
+        sgns = self.stamp_sign(x, train_data, sample)
 
         #print("chunk weight orig: ",self.p0, self.p1)
         #print("chunk weight: ",self.p0*self.chunk_weight, self.p1*self.chunk_weight) 
