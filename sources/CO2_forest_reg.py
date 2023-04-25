@@ -413,7 +413,7 @@ class CO2_forestReg:
             
             inter_log("Training forests")
             for train, test in kf.split(x,Y):         
-                tr = CO2_forest(C=self.C, dual=self.dual,
+                tr = CO2Forest(C=self.C, dual=self.dual,
                                  tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
                                  max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
                                  feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,

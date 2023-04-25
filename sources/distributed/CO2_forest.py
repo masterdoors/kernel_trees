@@ -55,7 +55,7 @@ def fitter_(self,sample_weight,addr):
         #command(2,-1,mask= int(1).to_bytes(1,byteorder='little') +  int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weight),addr=addr)
         Cmd(2,int(1).to_bytes(1,byteorder='little') +  int(0).to_bytes(1,byteorder='little') + pickle.dumps(sample_weight),self.db,self.res)
 
-class CO2_forest:
+class CO2Forest:
 
     def tree_split(self,bufs):
         bufs = sorted(bufs, key=lambda tup: tup[2])

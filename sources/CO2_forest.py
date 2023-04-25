@@ -7,6 +7,9 @@ from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler, Normalizer
 from sklearn.pipeline import Pipeline, make_pipeline
 from copy import deepcopy
+from sklearn.base import ClassifierMixin
+from sklearn.base import RegressorMixin
+
 #os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 '''
@@ -286,7 +289,7 @@ def inter_log(*args):
     with open("runlog.txt","a") as f:
         f.write(", ".join(args_) + "\n")
 
-class CO2_forest:
+class BaseCO2Forest:
     def eliminatedForest(self):
         that = deepcopy(self)
         for i in range(that.n_estimators):
@@ -435,7 +438,7 @@ class CO2_forest:
             
             inter_log("Training forests")
             for train, test in kf.split(x,Y):         
-                tr = CO2_forest(C=self.C, dual=self.dual,
+                tr = CO2Forest(C=self.C, dual=self.dual,
                                  tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
                                  max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
                                  feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,
@@ -881,5 +884,9 @@ class CO2_forest:
         self.univariate_ratio = univariate_ratio
 
 
+class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
+    pass
 
+class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
+    pass
 

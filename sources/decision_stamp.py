@@ -53,6 +53,10 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
+from sklearn.cluster import KMeans
+
+from sklearn.base import ClassifierMixin
+from sklearn.base import RegressorMixin
 
 import numpy
 from sympy.utilities.iterables import multiset_permutations
@@ -63,302 +67,11 @@ from sklearn.tree import DecisionTreeClassifier
 from numpy import isnan
 from scipy.sparse.csc import csc_matrix
 
-from sklearn.metrics import accuracy_score
-#from thundersvm import *
-import subprocess
-#from memory_profiler import profile
-
-import psutil
-
-class DecisionStamp:
-    
-    def estimateTetas(self,x,Y,train_data):
-        counts = self.n_classes
-
-        self.Teta0 = zeros((counts))
-        self.Teta1 = zeros((counts))
-
-        signs = self.stamp_sign(x,train_data,sample = False)
-
-        if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
-            signs = signs.todense()
-
-        cl = asarray(multiply(signs,Y + 1))
-
-        cl = cl[nonzero(cl)]
-
-        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
-        neg_cl = abs(cl[cl < 0.0]).astype(int64)
-
-        lcount = bincount(neg_cl)
-        rcount = bincount(pos_cl)
-
-        for i in range(1,len(lcount)):
-                self.Teta0[self.class_map[i - 1]] += float(lcount[i])
+from CO2_criteria import *
 
 
-        for i in range(1,len(rcount)):
-                self.Teta1[self.class_map[i - 1]] += float(rcount[i])
+class BaseDecisionStamp:
 
-        
-    def delta(self,H,Y):
-        res = 0
-        for s in (-1,+1):
-            Hl = float(H[H==s].size) / H.size
-            index = asarray(range(H.shape[1]))
-            Hs_index = index[H[0,index] == s]
-            for y in self.class_map_inv:
-                y_index = index[Y[index] == y]
-                common_ids = intersect1d(y_index, Hs_index) 
-                if Hs_index.shape[0] != 0:
-                    pj = float(common_ids.shape[0]) / Hs_index.shape[0]
-                    res += Hl * pj * (1 - pj) 
- 
-        return res       
-    
-    def criteriaGini(self,pj):
-        return pj*(1 - pj)
-    
-    def criteriaIG(self,pj):
-        eps = 0.0000001
-        if pj == 0:
-            pj += eps
-        return - pj*numpy.log(pj)       
-    
-    def criteriaGinirow(self,pj):
-        return (pj*(1 - pj)).sum()
-    
-    def criteriaIGrow(self,pj):
-        eps = 0.0000001
-        pj[pj == 0] = eps
-        return (- pj*numpy.log(pj)).sum()  
-
-
-    def getDeltaParams(self,H,Y,criteria):
-        res = 0
-        IH = {}
-        IH[-1] = float(H[H==-1].size)
-        IH[1] = float(H[H==+1].size)
-        Hsize = H.size
-        IY = {}
-        IY[-1] = {}
-        IY[1] = {}
-        
-        for s in (-1,+1):
-            Hl = float(H[H==s].size) / H.size
-                
-            index = asarray(range(H.shape[1]))
-            Hs_index = index[H[0,index] == s]
-            
-            for y in self.class_map_inv:
-                y_index = index[Y[index] == y]
-                common_ids = intersect1d(y_index, Hs_index) 
-                IY[s][y] = common_ids.shape[0]
-
-                if Hs_index.shape[0] != 0:
-                    pj = float(common_ids.shape[0]) / Hs_index.shape[0]
-                    res += Hl *  criteria(pj) 
- 
-        return Hsize, IH,IY, res           
-    
-    def delta_wise(self, Hsize, IH,IY,yi,hi, criteria):
-        res = 0
-        for s in [-1,1]:
-            Hl = float(IH[s] + hi*s) / Hsize
-            if IH[s] + hi*s > 0:
-                for y in self.class_map_inv:
-                    pj = 0
-                    if y == yi:
-                        pj = (IY[s][y] + hi*s) / (IH[s] + hi*s)
-                    else:    
-                        pj = (IY[s][y]) / (IH[s] + hi*s)
-                    
-                    res += Hl * criteria(pj)
-            if math.isnan(res):
-                res = 0
-        return res              
-
-    def calcGiniInc(self,w,x,Y):
-        signs = transpose(sign(x - w))
-       
-        cl = asarray(multiply(signs,Y))
-        
-        cl = cl[nonzero(cl)]
-        
-        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
-        neg_cl = abs(cl[cl < 0.0]).astype(int64)
-        cl = abs(cl).astype(int64)
-            
-        gl = 0
-        gr = 0
-        ga = 0
-        
-        lcount = bincount(neg_cl)
-        rcount = bincount(pos_cl)
-        acount = bincount(cl)    
-
-        for l in lcount:
-            gl += (float(l)/len(neg_cl)) * (1 - float(l)/len(neg_cl))
-
-        for r in rcount:
-            gr += (float(r)/len(pos_cl)) * (1 - float(r)/len(pos_cl))
-         
-        for a in acount:
-            ga += (float(a)/len(cl)) * (1 - float(a)/len(cl))
-            
-        if len(cl) > 0:     
-            return  ga - (float(len(neg_cl)) / len(cl))*gl -(float(len(pos_cl)) / len(cl))*gr
-        else:
-            return 0.        
-            
-    def calcGini(self,x,Y, train_data,report = False):
-        signs = self.stamp_sign(x,train_data)
-        
-        if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
-            signs = signs.todense()        
-       
-        cl = asarray(multiply(signs,Y))
-        
-        if isnan(cl).any():
-            return 0.0
-
-        cl = cl[nonzero(cl)]
-        
-        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
-        neg_cl = abs(cl[cl < 0.0]).astype(int64)
-        cl = abs(cl).astype(int64)
-            
-        gl = 0
-        gr = 0
-        ga = 0
-        
-        lcount = bincount(neg_cl)
-        rcount = bincount(pos_cl)
-        acount = bincount(cl)
-        
-        if report:
-            #print "Classes:",  acount
-            #print "Classes: ", lcount
-            #print "Classes: ", rcount
-            #print " (",lcount.sum(),",",rcount.sum(),")"
-            pass
-
-        for l in lcount:
-            gl += (float(l)/len(neg_cl)) * (1 - float(l)/len(neg_cl))
-
-        for r in rcount:
-            gr += (float(r)/len(pos_cl)) * (1 - float(r)/len(pos_cl))
-         
-        for a in acount:
-            ga += (float(a)/len(cl)) * (1 - float(a)/len(cl))
-            
-        #print "Impurities: ", ga, gl, gr 
-        if len(cl) > 0:     
-            return  ga - (float(len(neg_cl)) / len(cl))*gl -(float(len(pos_cl)) / len(cl))*gr
-        else:
-            return 0.
-        
-    def bijection(self,w,x,i,Y,minv,maxv,eps):
-        if maxv - minv > eps:
-            midllev = (maxv + minv) / 2
-            w_ = midllev - (midllev - minv) /2  
-            l = self.calcGiniInc(w_,x,Y)              
-            w_ = midllev + (maxv - midllev) /2    
-            r = self.calcGiniInc(w_,x,Y)               
-            if l > r:
-                return self.bijection(w,x,i,Y,minv,midllev,eps) 
-            else:
-                return self.bijection(w,x,i,Y,midllev,maxv,eps)                     
-        else:
-            w.fill(0.0)
-            w[0,i] = 1.0
-            w[0,w.shape[1] - 1] = minv  
-            return self.calcGiniInc(minv,x,Y)         
-    
-    
-    def searchDivider(self,w,x,Y,i):
-        eps = 0.0000001
-        w.fill(0.0)
-        x_ = asarray(x.getcol(i).todense())
-        maxv = x_.max(axis = 0)[0]
-        minv = x_.min(axis = 0)[0]
-        
-        if maxv - minv > eps:        
-            return  self.bijection(w,x_,i,Y,minv,maxv,eps) 
-        else:
-            return 0.0 
-    
-    def genBestSplit(self,x,Y,q):
-        
-        fw = self.features_weight.todense()
-        min_impurity = 0
-        min_impurity_w = zeros((1, x.shape[1]))
-        
-        indexies = asarray(argsort(fw))[0,:]
-        
-        counter = self.features_weight.shape[1] - self.features_weight.nnz
-        
-        qm = counter + len(bincount(Y))
-        
-        while (counter < qm or min_impurity == 0) and counter < x.shape[1] - 1:
-
-            i = randint(counter,x.shape[1] - 1)
-            w_ = zeros((1, x.shape[1]))
-            imp = self.searchDivider(w_,x,Y, indexies[i])
-               
-            if imp > min_impurity:
-                min_impurity = imp
-                min_impurity_w = w_
-            
-            if imp == 0:
-                fw[0, indexies[i]] = 0.0    
-                
-            t = indexies[counter]
-            indexies[counter] = indexies[i]
-            indexies[i] = t                 
-                
-            counter += 1    
-            
-        self.features_weight = csr_matrix(fw)    
-  
-        return min_impurity_w
-
-    def genBestSplitSerial(self,x,Y,q):
-        
-        fw = self.features_weight.todense()
-        min_impurity = 0
-        
-        indexies = asarray(argsort(fw))[0,:]
-        
-        counter = self.features_weight.shape[1] - self.features_weight.nnz
-        
-        qm = counter + q
-        
-        imp_list = []
-        
-        while (counter < qm or min_impurity == 0) and counter < x.shape[1] - 1:
-
-            i = randint(counter,x.shape[1] - 1)
-            w_ = zeros((1, x.shape[1]))
-            imp = self.searchDivider(w_,x,Y, indexies[i])
-               
-            if imp > min_impurity:
-                min_impurity = imp
-                imp_list.append(w_)
-            
-            if imp == 0:
-                fw[0, indexies[i]] = 0.0    
-                
-            t = indexies[counter]
-            indexies[counter] = indexies[i]
-            indexies[i] = t                 
-                
-            counter += 1    
-            
-        self.features_weight = csr_matrix(fw)    
-  
-        return imp_list, min_impurity
-    
     def swap_rows(self, mat, a, b):
         a_idx = where(mat.indices == a)
         b_idx = where(mat.indices == b)
@@ -372,8 +85,8 @@ class DecisionStamp:
         mat[b, :] = buf
         return mat  
     
-    #@profile
-    def convexConcaveOptimization(self,x,Y,sample_weight,samp_counts):
+   #@profile
+    def optimization(self,x,Y,sample_weight,samp_counts):
         #random.seed()
         self.counts = numpy.zeros((x.shape[0],))
         if x.shape[0] > 0:
@@ -430,125 +143,7 @@ class DecisionStamp:
             
             #print (x_tmp.shape,fw_size)
 
-            H = zeros(shape = (1,Y_tmp.shape[0]))        
-            
-            gini_res = 0    
-    
-            class_counts = unique(Y_tmp, return_counts=True)
-            class_counts = numpy.asarray(list(zip(class_counts[0],class_counts[1])))
-
-            class2side = {}
-            class2count = {}
-            side2count = {}
-
-            min_gini = self.max_criteria
-            min_p = []
-            
-            if len(class_counts) > 13:
-            #Greedy
-                for _ in range(len(class_counts)*len(class_counts)):
-                    lmin_gini = self.max_criteria
-                    lmin_p = []
-
-                    next = True
-                    elements = [-1,+1]
-                    probabilities = [0.5, 0.5]
-                    p = numpy.random.choice(elements,len(class_counts) , p=probabilities)
-
-                    zc = 0 
-                    while next:
-                        next = False
-                        zc += 1  
-                        for i in range(p.shape[0]):
-                            p[i] = - p[i]
-                            left_counts = class_counts[p < 0, 1]
-                            right_counts = class_counts[p > 0, 1]
-
-                            lcs = left_counts.sum()
-                            rcs = right_counts.sum()  
-                            den = lcs + rcs 
-
-                            PL = float(lcs)/ den
-                            PR = float(rcs)/ den
-            
-                            gini_l = self.criteria_row(left_counts / lcs)
-                            gini_r = self.criteria_row(right_counts / rcs)
-
-                            gini =  PL*gini_l + PR* gini_r
-                            if gini < lmin_gini:
-                                lmin_p = deepcopy(p)
-                                lmin_gini = gini
-                                next = True
-                        p = lmin_p
-
-                    if  lmin_gini < min_gini:
-                        min_p = deepcopy(lmin_p)
-                        min_gini = lmin_gini
- 
-            else:
-                for zc in range(1,len(class_counts),1):
-                    a = numpy.hstack([-numpy.ones((zc,)),numpy.ones((len(class_counts) - zc,))])
-                    for p in multiset_permutations(a):
-                        p = numpy.asarray(p)
-                        left_counts = class_counts[p < 0, 1]
-                        right_counts = class_counts[p > 0, 1]
-
-                        lcs = left_counts.sum()
-                        rcs = right_counts.sum()  
-                        den = lcs + rcs 
-
-                        PL = float(lcs)/ den
-                        PR = float(rcs)/ den
-            
-                        gini_l = self.criteria_row(left_counts / lcs)
-                        gini_r = self.criteria_row(right_counts / rcs)
-
-                        gini =  PL*gini_l + PR* gini_r
-
-                        if gini < min_gini:
-                            min_p = p
-                            min_gini = gini
-
-            left_counts = numpy.asarray([c[1] for c in class_counts[min_p < 0]])
-            right_counts = numpy.asarray([c[1] for c in class_counts[min_p > 0]])
-            side2count[-1] = left_counts.sum()
-            side2count[1] = right_counts.sum()               
-            for i,(cl,cnt) in enumerate(class_counts):
-                class2side[cl] = min_p[i]
-                H[0,Y_tmp == cl] = min_p[i]     
-                class2count[cl] = cnt
-
-            gini_best = 0
-            gini_old = 0
-            for class_id, count_ in class_counts:
-                p = float(count_) / side2count[class2side[class_id]]
-                p2 = float(count_) / (side2count[-1] + side2count[1])
-
-                gini_old += self.criteria(p2)
-                gini_best +=  (float(side2count[class2side[class_id]])/ (side2count[-1] + side2count[1]))*self.criteria(p)
-
-            Hsize, IH,IY, gini_old_wise = self.getDeltaParams(H,Y_tmp, self.criteria)
-
-            gini_best = gini_old - gini_best
-
-            deltas = zeros(shape=(H.shape[1]))
-            #deltas = ones(shape=(H.shape[1])) 
-            for i in range(H.shape[1]):
-                gini_i = self.delta_wise(Hsize, IH,IY,Y_tmp[i],-H[0,i],self.criteria)
-                deltas[i] = float(gini_i - gini_old_wise)  
-
-                if self.balance:
-                    deltas[i] = deltas[i] * float(H.reshape(-1).shape[0]) / (2*side2count[H[0,i]])
-
-            #deltas = deltas - deltas.min()
-
-            ratio = 1
-
-            dm = deltas.max()
-            if deltas.max() == 0:
-                deltas = ones(shape=(H.shape[1]))  
-            else:
-                deltas = (deltas / dm)*ratio 
+            H, deltas = self.setupSlackRescaling(Y_tmp)
                 
             try:
                 if self.kernel == 'linear':
@@ -563,12 +158,11 @@ class DecisionStamp:
                 #else:
                 if self.kernel == 'polynomial':
                     self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma)
-                    self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)  
+                    self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
                 else:
                     if self.kernel == 'gaussian':
                         self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
                         self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
-                        out = self.model.predict(x[:, self.features_weight],x[sample_idx_ran][:, self.features_weight])
                     else:
                         if self.kernel == 'univariate':
                             self.model = DecisionTreeClassifier( criterion= self.criteria_str, max_depth=1)
@@ -581,41 +175,7 @@ class DecisionStamp:
                 print(traceback.format_exc())
                 return 0.            
 
-            print("Before Gini: ", Y_tmp.shape,self.features_weight.shape,psutil.virtual_memory())
-            
-            gini_res = self.calcGini(x[sample_idx_ran],Y_tmp,x)
-            
-            print("After Gini: ", Y_tmp.shape,self.features_weight.shape,psutil.virtual_memory())
-
-            #print (gini_res,"|",gini_best)
-
-            self.estimateTetas(x[sample_idx_ran][:, self.features_weight], Y_tmp,x) 
-
-            self.p0 = zeros(shape=(self.class_max + 1))
-            self.p1 = zeros(shape=(self.class_max + 1))
-
-            sum_t0 = self.Teta0.sum()
-            sum_t1 = self.Teta1.sum()
-
-            if sum_t0 > 0: 
-                p0_ = multiply(self.Teta0, 1. / sum_t0)                
-
-                for i in range(len(p0_)):
-                    self.p0[self.class_map_inv[i]] = p0_[i]
-
-                #exp_0 = exp(self.p0)
-                #self.p0 = exp_0 / exp_0.sum()
-
-            if sum_t1 > 0:       
-                p1_ = multiply(self.Teta1, 1. / sum_t1)
-
-                for i in range(len(p1_)):
-                    self.p1[self.class_map_inv[i]] = p1_[i]  
-
-                #exp_1 = exp(self.p1)
-                #self.p1 = exp_1 / exp_1.sum()
-            self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
-            #print ("pass 3")
+            gini_res = self.estimateOutput(x,Y_tmp)  
             return gini_res    
 #public:
 
@@ -626,14 +186,17 @@ class DecisionStamp:
         
         if criteria == "gain":
             self.criteria_str = 'entropy'
-            self.criteria = self.criteriaIG
-            self.criteria_row = self.criteriaIGrow
+            self.criteria = criteriaIG
+            self.criteria_row = criteriaIGrow
             self.max_criteria = 1e32
-        else:
+        elif  criteria == "gini":
             self.criteria_str = criteria
-            self.criteria = self.criteriaGini 
-            self.criteria_row = self.criteriaGinirow
-            self.max_criteria = 1.0       
+            self.criteria = criteriaGini 
+            self.criteria_row = criteriaGinirow
+            self.max_criteria = 1.0
+        else:
+            self.criteria = criteriaMSE           
+            
         
         self.tol = tol
         self.n_classes = n_classes
@@ -663,7 +226,7 @@ class DecisionStamp:
         self.class_map = class_map
         self.class_map_inv = class_map_inv
         
-        gres = self.convexConcaveOptimization(x,Y,sample_weight,counts)
+        gres = self.optimization(x,Y,sample_weight,counts)
         #x = deepcopy(x)
         sample_weightL = zeros(shape=sample_weight.shape,dtype = int8)
         sample_weightR = zeros(shape=sample_weight.shape,dtype = int8)
@@ -742,3 +305,341 @@ class DecisionStamp:
             return res, leaf_ids
         else:    
             return res
+        
+
+class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
+    def delta(self,H,Y):
+        res = 0
+        for s in (-1,+1):
+            Hl = float(H[H==s].size) / H.size
+            index = asarray(range(H.shape[1]))
+            Hs_index = index[H[0,index] == s]
+            for y in self.class_map_inv:
+                y_index = index[Y[index] == y]
+                common_ids = intersect1d(y_index, Hs_index) 
+                if Hs_index.shape[0] != 0:
+                    pj = float(common_ids.shape[0]) / Hs_index.shape[0]
+                    res += Hl * pj * (1 - pj) 
+ 
+        return res       
+    
+    def getDeltaParams(self,H,Y,criteria):
+        res = 0
+        IH = {}
+        IH[-1] = float(H[H==-1].size)
+        IH[1] = float(H[H==+1].size)
+        Hsize = H.size
+        IY = {}
+        IY[-1] = {}
+        IY[1] = {}
+        
+        for s in (-1,+1):
+            Hl = float(H[H==s].size) / H.size
+                
+            index = asarray(range(H.shape[1]))
+            Hs_index = index[H[0,index] == s]
+            
+            for y in self.class_map_inv:
+                y_index = index[Y[index] == y]
+                common_ids = intersect1d(y_index, Hs_index) 
+                IY[s][y] = common_ids.shape[0]
+
+                if Hs_index.shape[0] != 0:
+                    pj = float(common_ids.shape[0]) / Hs_index.shape[0]
+                    res += Hl *  criteria(pj) 
+ 
+        return Hsize, IH,IY, res           
+    
+    def delta_wise(self, Hsize, IH,IY,yi,hi, criteria):
+        res = 0
+        for s in [-1,1]:
+            Hl = float(IH[s] + hi*s) / Hsize
+            if IH[s] + hi*s > 0:
+                for y in self.class_map_inv:
+                    pj = 0
+                    if y == yi:
+                        pj = (IY[s][y] + hi*s) / (IH[s] + hi*s)
+                    else:    
+                        pj = (IY[s][y]) / (IH[s] + hi*s)
+                    
+                    res += Hl * criteria(pj)
+            if math.isnan(res):
+                res = 0
+        return res              
+    
+    def estimateTetas(self,x,Y,train_data):
+        counts = self.n_classes
+
+        self.Teta0 = zeros((counts))
+        self.Teta1 = zeros((counts))
+
+        signs = self.stamp_sign(x,train_data,sample = False)
+
+        if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
+            signs = signs.todense()
+
+        cl = asarray(multiply(signs,Y + 1))
+
+        cl = cl[nonzero(cl)]
+
+        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
+        neg_cl = abs(cl[cl < 0.0]).astype(int64)
+
+        lcount = bincount(neg_cl)
+        rcount = bincount(pos_cl)
+
+        for i in range(1,len(lcount)):
+                self.Teta0[self.class_map[i - 1]] += float(lcount[i])
+
+
+        for i in range(1,len(rcount)):
+                self.Teta1[self.class_map[i - 1]] += float(rcount[i])
+                    
+    def calcCriterion(self,x,Y, train_data,report = False):
+        signs = self.stamp_sign(x,train_data)
+        
+        if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
+            signs = signs.todense()        
+       
+        cl = asarray(multiply(signs,Y))
+        
+        if isnan(cl).any():
+            return 0.0
+
+        cl = cl[nonzero(cl)]
+        
+        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
+        neg_cl = abs(cl[cl < 0.0]).astype(int64)
+        cl = abs(cl).astype(int64)
+            
+        gl = 0
+        gr = 0
+        ga = 0
+        
+        lcount = bincount(neg_cl)
+        rcount = bincount(pos_cl)
+        acount = bincount(cl)
+        
+        if report:
+            #print "Classes:",  acount
+            #print "Classes: ", lcount
+            #print "Classes: ", rcount
+            #print " (",lcount.sum(),",",rcount.sum(),")"
+            pass
+
+        for l in lcount:
+            gl += (float(l)/len(neg_cl)) * (1 - float(l)/len(neg_cl))
+
+        for r in rcount:
+            gr += (float(r)/len(pos_cl)) * (1 - float(r)/len(pos_cl))
+         
+        for a in acount:
+            ga += (float(a)/len(cl)) * (1 - float(a)/len(cl))
+            
+        #print "Impurities: ", ga, gl, gr 
+        if len(cl) > 0:     
+            return  ga - (float(len(neg_cl)) / len(cl))*gl -(float(len(pos_cl)) / len(cl))*gr
+        else:
+            return 0.    
+    
+    def setupSlackRescaling(self,Y_tmp):
+        H = zeros(shape = (1,Y_tmp.shape[0]))        
+  
+        class_counts = unique(Y_tmp, return_counts=True)
+        class_counts = numpy.asarray(list(zip(class_counts[0],class_counts[1])))
+
+        class2side = {}
+        class2count = {}
+        side2count = {}
+
+        min_gini = self.max_criteria
+        min_p = []
+        
+        if len(class_counts) > 13:
+        #Greedy
+            for _ in range(len(class_counts)*len(class_counts)):
+                lmin_gini = self.max_criteria
+                lmin_p = []
+
+                next = True
+                elements = [-1,+1]
+                probabilities = [0.5, 0.5]
+                p = numpy.random.choice(elements,len(class_counts) , p=probabilities)
+
+                zc = 0 
+                while next:
+                    next = False
+                    zc += 1  
+                    for i in range(p.shape[0]):
+                        p[i] = - p[i]
+                        left_counts = class_counts[p < 0, 1]
+                        right_counts = class_counts[p > 0, 1]
+
+                        lcs = left_counts.sum()
+                        rcs = right_counts.sum()  
+                        den = lcs + rcs 
+
+                        PL = float(lcs)/ den
+                        PR = float(rcs)/ den
+        
+                        gini_l = self.criteria_row(left_counts / lcs)
+                        gini_r = self.criteria_row(right_counts / rcs)
+
+                        gini =  PL*gini_l + PR* gini_r
+                        if gini < lmin_gini:
+                            lmin_p = deepcopy(p)
+                            lmin_gini = gini
+                            next = True
+                    p = lmin_p
+
+                if  lmin_gini < min_gini:
+                    min_p = deepcopy(lmin_p)
+                    min_gini = lmin_gini
+
+        else:
+            for zc in range(1,len(class_counts),1):
+                a = numpy.hstack([-numpy.ones((zc,)),numpy.ones((len(class_counts) - zc,))])
+                for p in multiset_permutations(a):
+                    p = numpy.asarray(p)
+                    left_counts = class_counts[p < 0, 1]
+                    right_counts = class_counts[p > 0, 1]
+
+                    lcs = left_counts.sum()
+                    rcs = right_counts.sum()  
+                    den = lcs + rcs 
+
+                    PL = float(lcs)/ den
+                    PR = float(rcs)/ den
+        
+                    gini_l = self.criteria_row(left_counts / lcs)
+                    gini_r = self.criteria_row(right_counts / rcs)
+
+                    gini =  PL*gini_l + PR* gini_r
+
+                    if gini < min_gini:
+                        min_p = p
+                        min_gini = gini
+
+        left_counts = numpy.asarray([c[1] for c in class_counts[min_p < 0]])
+        right_counts = numpy.asarray([c[1] for c in class_counts[min_p > 0]])
+        side2count[-1] = left_counts.sum()
+        side2count[1] = right_counts.sum()               
+        for i,(cl,cnt) in enumerate(class_counts):
+            class2side[cl] = min_p[i]
+            H[0,Y_tmp == cl] = min_p[i]     
+            class2count[cl] = cnt
+
+        gini_best = 0
+        gini_old = 0
+        for class_id, count_ in class_counts:
+            p = float(count_) / side2count[class2side[class_id]]
+            p2 = float(count_) / (side2count[-1] + side2count[1])
+
+            gini_old += self.criteria(p2)
+            gini_best +=  (float(side2count[class2side[class_id]])/ (side2count[-1] + side2count[1]))*self.criteria(p)
+
+        Hsize, IH,IY, gini_old_wise = self.getDeltaParams(H,Y_tmp, self.criteria)
+
+        gini_best = gini_old - gini_best
+
+        deltas = zeros(shape=(H.shape[1]))
+        #deltas = ones(shape=(H.shape[1])) 
+        for i in range(H.shape[1]):
+            gini_i = self.delta_wise(Hsize, IH,IY,Y_tmp[i],-H[0,i],self.criteria)
+            deltas[i] = float(gini_i - gini_old_wise)  
+
+            if self.balance:
+                deltas[i] = deltas[i] * float(H.reshape(-1).shape[0]) / (2*side2count[H[0,i]])
+
+        #deltas = deltas - deltas.min()
+
+        ratio = 1
+
+        dm = deltas.max()
+        if deltas.max() == 0:
+            deltas = ones(shape=(H.shape[1]))  
+        else:
+            deltas = (deltas / dm)*ratio 
+        return H, deltas
+        
+    def estimateOutput(self, x,Y_tmp):
+        gini_res = self.calcCriterion(x[self.sample_weight],Y_tmp,x)
+
+        self.estimateTetas(x[self.sample_weight][:, self.features_weight], Y_tmp,x) 
+
+        self.p0 = zeros(shape=(self.class_max + 1))
+        self.p1 = zeros(shape=(self.class_max + 1))
+
+        sum_t0 = self.Teta0.sum()
+        sum_t1 = self.Teta1.sum()
+
+        if sum_t0 > 0: 
+            p0_ = multiply(self.Teta0, 1. / sum_t0)                
+
+            for i in range(len(p0_)):
+                self.p0[self.class_map_inv[i]] = p0_[i]
+
+            #exp_0 = exp(self.p0)
+            #self.p0 = exp_0 / exp_0.sum()
+
+        if sum_t1 > 0:       
+            p1_ = multiply(self.Teta1, 1. / sum_t1)
+
+            for i in range(len(p1_)):
+                self.p1[self.class_map_inv[i]] = p1_[i]  
+
+            #exp_1 = exp(self.p1)
+            #self.p1 = exp_1 / exp_1.sum()
+        self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
+        #print ("pass 3")   
+        return gini_res
+                          
+class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
+    def calcCriterion(self,x,Y, train_data,report = False):  
+        H = self.stamp_sign(x, train_data, sample = False)
+        return self.criteriaMSE(Y.mean(),Y) - self.criteriaMSE(self.p0,Y[H == 1]) - self.criteriaMSE(self.p1,Y[H == -1])          
+    
+    def setupSlackRescaling(self,Y_tmp): 
+        k = KMeans(n_clusters=2)
+        H = k.fit_predict(Y_tmp.reshape(-1,1))*2 - 1    
+
+        deltas = zeros(shape=(H.shape[0]))
+
+        orig_criterion = self.criteriaMSE(Y_tmp[H == -1].mean(),Y_tmp[H == -1]) + self.criteriaMSE(Y_tmp[H == 1].mean(),Y_tmp[H == 1])
+        for i in range(H.shape[0]):
+            H[i] = - H[i]
+            la = Y_tmp[H == -1]
+            ra = Y_tmp[H == 1]
+            if la.shape[0] == 0 or ra.shape[0] == 0:
+                deltas[i] = Y_tmp.std() * Y_tmp.std() 
+            else:    
+                deltas[i] = self.criteriaMSE(la.mean(),la) + self.criteriaMSE(ra.mean(),ra) - orig_criterion
+            H[i] = - H[i]
+
+        ratio = 1
+        #print("deltas:",deltas)
+
+        dm = deltas.max()
+        if deltas.max() == 0:
+            deltas = ones(shape=(H.shape[1]))  
+        else:
+            deltas = (deltas / dm)*ratio   
+        return H, deltas   
+    
+    def estimateOutput(self, x,Y_tmp):
+        H = self.stamp_sign(x[self.sample_weight],sample = False)
+        if Y_tmp[H > 0].shape[0] == 0:
+            return 0.
+        
+        self.p0 = Y_tmp[H > 0].mean()
+        self.p1 = Y_tmp[H < 0].mean()
+        
+        #print (self.p0, self.p1)
+        gini_res = self.criteriaMSE(Y_tmp.mean(),Y_tmp) - self.criteriaMSE(self.p0,Y_tmp[H == 1]) - self.criteriaMSE(self.p1,Y_tmp[H == -1])
+        #print(gini_res)
+        self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
+        return gini_res                        
+           
+
+        
+            

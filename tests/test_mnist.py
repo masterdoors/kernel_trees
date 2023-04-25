@@ -18,7 +18,7 @@ from random import randint
 import numpy
 
 import CO2_tree as co2t
-import CO2_forest as co2f
+import CO2Forest as co2f
 
 
 def calcAcc(Y1,Y2):
@@ -88,7 +88,7 @@ with open("MNIST.db", 'rb') as input_:
                         print ("Test carbon rbf forest with tree deth= ", d+1, " C= ", C, " s ratio ", r," f ratio ",f)#,"l:",l)
 
                         print  (datetime.datetime.now())
-                        trc = co2f.CO2_forest(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,n_estimators=10,gamma=1,dropout_low=r,dropout_high=1.,noise=0,cov_dr=0,criteria='gain')
+                        trc = co2f.CO2Forest(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,n_estimators=10,gamma=1,dropout_low=r,dropout_high=1.,noise=0,cov_dr=0,criteria='gain')
                         
                         trc.fit(x_sp_t, Y_train)
 

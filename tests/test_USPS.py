@@ -8,7 +8,7 @@ Created on 21 мая 2016 г.
 
 from sklearn import datasets
 import CO2_tree as co2t
-import CO2_forest as co2f
+import CO2Forest as co2f
 import pickle
 
 from scipy.sparse import csr_matrix
@@ -75,7 +75,7 @@ for c in C:
                     #print  datetime.datetime.now()
     
                     #trc = co2t.CO2Tree(C=c, tol = 0.00001,max_iter=300000,kernel='linear',seed = randint(1, 100), max_deth=d,gamma=kg) 
-                    trc = co2f.CO2_forest(C=c, tol = 0.00001,max_iter=300000,kernel='linear',max_deth=d,n_jobs=5,sample_ratio=r, n_estimators=10,gamma=kg)
+                    trc = co2f.CO2Forest(C=c, tol = 0.00001,max_iter=300000,kernel='linear',max_deth=d,n_jobs=5,sample_ratio=r, n_estimators=10,gamma=kg)
                     #trc = RandomForestClassifier(n_estimators=100, max_depth=d, max_features=r, n_jobs=6)
     
                     trc.fit(x_sp_t, Y_train)

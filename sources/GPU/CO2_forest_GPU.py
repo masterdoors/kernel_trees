@@ -299,7 +299,7 @@ def testerL2_noise(splits,forests,main_forest,x,Y,x_test,Y_test, c,n,n2):
             orig_tests.append(1. - accuracy_score(Y_test,y_pred_)) 
     return c,n,n2,numpy.asarray(tests).mean() + numpy.asarray(tests).std(), numpy.asarray(orig_tests).mean()
 
-class CO2_forest:
+class CO2Forest:
     def stat(self):
         return Parallel(n_jobs=self.n_jobs)(delayed(statter)(t) for t in self.trees)
     
@@ -331,7 +331,7 @@ class CO2_forest:
             
             print ("Training forests")
             for train, test in kf.split(x,Y):         
-                tr = CO2_forest(C=self.C, dual=self.dual,
+                tr = CO2Forest(C=self.C, dual=self.dual,
                                 tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
                                 max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
                                 feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,
@@ -649,7 +649,7 @@ class CO2_forest:
             
             print ("Training forests")
             for train, test in kf.split(x,Y):         
-                tr = CO2_forest(C=self.C, dual=self.dual,
+                tr = CO2Forest(C=self.C, dual=self.dual,
                                 tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
                                 max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
                                 feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,

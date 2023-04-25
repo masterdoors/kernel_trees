@@ -25,12 +25,13 @@ from numpy import unique
 from numpy import count_nonzero
 
 from copy import deepcopy
+from sklearn.base import ClassifierMixin
+from sklearn.base import RegressorMixin
 
 import numpy
 
 import sys
 
-from memory_profiler import profile
 
 def expandMatrix(x):
         x = csr_matrix((x.data, x.indices, x.indptr),shape=(x.shape[0], x.shape[1] + 1), dtype = numpy.float32, copy=False)
@@ -44,7 +45,7 @@ def expandMatrix(x):
         
         return x
 
-class CO2Tree:
+class BaseCO2Tree:
     
     def clearNode(self,Y,sample_weight):
         y = asarray(multiply(sample_weight.reshape(-1),Y))
@@ -66,9 +67,6 @@ class CO2Tree:
                 #print "Already processed: ", self.processed_counter
                 self.old_processed_counter = self.processed_counter
         nnz = count_nonzero(sample_weight)
-        
-        with open("forest_mem_test.log","a") as f:
-            f.write("Tree: " +  str(self.seed) + " " + str(deth) + " " + str(len(self.nodes)) + "\n")
 
         if  self.max_deth is None or deth <= self.max_deth: 
             if nnz >= self.min_samples_split: 
@@ -378,3 +376,10 @@ class CO2Tree:
         self.seed = seed
         #if seed:
         #    random.seed(seed)
+        
+class CO2TreeClassifier(BaseCO2Tree, ClassifierMixin):
+    pass
+
+class CO2TreeRegressor(BaseCO2Tree, RegressorMixin):
+    pass
+

@@ -132,7 +132,7 @@ def weighter(tree,forest,w, offset = 0):
 
 # -
 
-class CO2_forest:
+class CO2Forest:
     def stat(self):
         return Parallel(n_jobs=self.n_jobs)(delayed(statter)(t) for t in self.trees)
     
@@ -549,7 +549,7 @@ class CO2_forest:
             #for c in [0.01,0.1,1.0,10, 100]:
             #    for f in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
             #        for n in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
-            #            lr = CO2_forest(C=c, dual=False,tol = 0.0001,max_iter=2000000000,
+            #            lr = CO2Forest(C=c, dual=False,tol = 0.0001,max_iter=2000000000,
             #                            kernel='linear',max_deth=2,n_jobs=10,sample_ratio=1.0,
             #                            feature_ratio = f,n_estimators=10,gamma=5,dropout_low=n,dropout_high=1.0,
             #                            noise=0.,cov_dr=0,criteria='gain')

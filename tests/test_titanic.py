@@ -1,5 +1,5 @@
 import CO2_tree as co2t
-import CO2_forest as co2f
+import CO2Forest as co2f
 import numpy
 import pickle
 from scipy import sparse
@@ -46,7 +46,7 @@ for d in tree_deth:
                             print ("Test carbon forest with tree deth= ", d+1, " C= ", c, " s ratio ", sratio," s ration 2" ,sratio2," f ratio ",fratio," noise=",ns, "cov=",cov)
                             for train, test in kf.split(x):
         
-                                trc = co2f.CO2_forest(C=c, dual=False,tol = 0.0000001,max_iter=1000000,kernel='linear',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = fratio,n_estimators=10,gamma=1,dropout_low=sratio,dropout_high=sratio2,noise=ns,cov_dr=cov)
+                                trc = co2f.CO2Forest(C=c, dual=False,tol = 0.0000001,max_iter=1000000,kernel='linear',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = fratio,n_estimators=10,gamma=1,dropout_low=sratio,dropout_high=sratio2,noise=ns,cov_dr=cov)
         
                                 trc.fit(sparse.csr_matrix(x[train]), y[train])
         

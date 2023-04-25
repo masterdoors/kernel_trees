@@ -15,7 +15,7 @@ from scipy import sparse
 from sklearn.preprocessing import normalize
 from sklearn.impute import SimpleImputer
 import CO2_tree as co2t
-import CO2_forest as co2f
+import CO2Forest as co2f
 from numpy import random
 from random import randint
 from sklearn.metrics import log_loss
@@ -76,7 +76,7 @@ def test():
                         
                         print ("Test carbon forest with tree deth= ", d+1, " C= ", c, " s ratio ", sratio," f ratio ",fratio," gamma=",1)            
                         #trc = co2t.CO2Tree(C=c, tol = 0.0001,max_iter=5000000,kernel='linear',seed = randint(1, 100), feature_ratio = fratio, max_deth=d,gamma=1,dual=False)
-                        trc = co2f.CO2_forest(C=c, dual=False,tol = 0.0000001,max_iter=10000,kernel='linear',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = fratio,n_estimators=10,gamma=1,dropout=sratio,noise=0.0)        
+                        trc = co2f.CO2Forest(C=c, dual=False,tol = 0.0000001,max_iter=10000,kernel='linear',max_deth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = fratio,n_estimators=10,gamma=1,dropout=sratio,noise=0.0)        
                         
                         trc.fit(sparse.csr_matrix(x[train]), y[train])
 

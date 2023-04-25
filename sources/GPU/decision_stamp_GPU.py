@@ -212,7 +212,7 @@ class DecisionStamp:
         else:
             return 0.        
             
-    def calcGini(self,x,Y, report = False):
+    def calcCriterion(self,x,Y, report = False):
         signs = self.stamp_sign(x)
         
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
@@ -367,7 +367,7 @@ class DecisionStamp:
         return mat  
     
     #@profile
-    def convexConcaveOptimization(self,x,Y,sample_weight,samp_counts):
+    def optimization(self,x,Y,sample_weight,samp_counts):
         random.seed()
         self.counts = numpy.zeros((x.shape[0],))
         if x.shape[0] > 0:
@@ -588,7 +588,7 @@ class DecisionStamp:
                 print (str(exp))
                 return 0.            
 
-            gini_res = self.calcGini(x,Y)
+            gini_res = self.calcCriterion(x,Y)
             
             self.estimateTetas(x_tmp, Y_tmp) 
 
@@ -655,7 +655,7 @@ class DecisionStamp:
         self.class_map = class_map
         self.class_map_inv = class_map_inv
         
-        gres = self.convexConcaveOptimization(x,Y,sample_weight,counts)
+        gres = self.optimization(x,Y,sample_weight,counts)
         #x = deepcopy(x)
         sample_weightL = zeros(shape=sample_weight.shape,dtype = int8)
         sample_weightR = zeros(shape=sample_weight.shape,dtype = int8)
