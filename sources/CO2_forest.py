@@ -1,11 +1,9 @@
 import pickle
 import os
-import datetime
-from scipy.optimize import linprog
 from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler, Normalizer
-from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.pipeline import make_pipeline
 from copy import deepcopy
 from sklearn.base import ClassifierMixin
 from sklearn.base import RegressorMixin
@@ -18,33 +16,25 @@ Created on 27 марта 2016 г.
 @author: keen
 '''
 import CO2_tree as co2
-from multiprocessing import Pool
-from functools import partial
 
 from numpy import argmax
 from numpy import multiply
 from numpy import asarray
 
 from joblib import Parallel, delayed
-import os
 from scipy.sparse.csr import csr_matrix
 
-from scipy.special import kl_div
 
 from numpy import load
 from numpy import save
 import uuid
 import numpy
 
-from scipy.spatial.distance import jensenshannon 
-from scipy.stats import entropy
 
-from numpy import corrcoef
+from scipy.stats import entropy
 from numpy import cov
-from sklearn.preprocessing import normalize
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
-from sklearn.model_selection import KFold
 from sklearn.preprocessing import LabelEncoder
 
 def fitter(uuids,forest,shapex,seed_):
@@ -54,22 +44,10 @@ def fitter(uuids,forest,shapex,seed_):
     x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32,copy=False)
     Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
     
-    #if seed_ % 2 == 0:
-    #    k = 'polynomial'
-    #else:
-    #    k = 'gaussian'
-    
-    #if forest.univariate_ratio > 0.:
-    #    flag = numpy.random.choice([0,1], p=[forest.univariate_ratio,1 - forest.univariate_ratio])
-    #    if flag == 0:
-    #        k = 'univariate'
-    #    else:
-    #        k = forest.kernel    
-    #else:
     k = forest.kernel
         
     tree = co2.CO2Tree(C=forest.C , kernel=k,\
-    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = seed_,\
      sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -100,12 +78,12 @@ def indicator(uuids, shapex,train_shape,tree,noise,balance_noise):
     indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
     ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
     
+    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)        
     dataX = load('/dev/shm/' + uuids + 'trainDataX.npy',mmap_mode='r')
     indX = load('/dev/shm/' + uuids + "trainIndX.npy",mmap_mode='r')
     ptrX = load('/dev/shm/' + uuids + "trainPtrX.npy",mmap_mode='r')    
-    train_data = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32,copy=False)    
+    train_data = csr_matrix((dataX,indX,ptrX), shape=train_shape,dtype=numpy.float32,copy=False)    
 
-    x = csr_matrix((dataX,indX,ptrX), shape=train_shape,dtype=numpy.float32, copy=False)    
     return tree.getIndicators(x, train_data, noise = noise, balance_noise = balance_noise)     
 
 def statter(tree):
@@ -131,158 +109,6 @@ def weighter(tree,forest,w, offset = 0):
         t.estimateChunkWeights(w_)        
     return t
 
-def testerL2(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
-    tests = []
-    orig_tests = []
-    for _ in range(5):
-        for i in range(len(splits)): 
-            tr = forests[i]
-            lr_data = splits[i][0]
-            lr_data_test = splits[i][1]
- 
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)       
-            lr_data_test = mm.transform(lr_data_test)            
-
-            lr = LogisticRegression(C=c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)
-
-            lr.fit(lr_data, splits_Y[i][0])
-
-            to_remove,before,after = tr.prune(lr_data, lr.coef_, n)
-            lr_data = tr.do_prune(lr_data,to_remove)
-
-            lr = LogisticRegression(C=c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)                    
-            lr.fit(lr_data, splits_Y[i][0])
-
-            lr_data = tr.do_prune(lr_data_test,to_remove)
-            y_pred_ = lr.predict(lr_data)                         
-            tests.append(1. - accuracy_score(splits_Y[i][1],y_pred_))
-            
-    return c,n,numpy.asarray(tests).mean() + numpy.asarray(tests).std()
-
-def testerNoise(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
-    tests = []
-    orig_tests = []
-    for _ in range(5):
-        for i in range(len(splits)): 
-            tr = forests[i]
-            lr_data_test = splits[i][1]
-            lr_data = tr.addNoise(splits[i][0],n) 
-            
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)       
-            lr_data_test = mm.transform(lr_data_test)               
-
-            lr = LogisticRegression(C=c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)
-
-            lr.fit(lr_data, splits_Y[i][0])
-            y_pred_ = lr.predict(lr_data_test)                 
-            tests.append(1. - accuracy_score(splits_Y[i][1],y_pred_))
-
-    return c,n,numpy.asarray(tests).mean() + numpy.asarray(tests).std()             
-
-def testerNaive(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
-    tests = []
-    orig_tests = []
-    for _ in range(5):
-        for i in range(len(splits)): 
-            tr = forests[i]
-            lr_data = splits[i][0]
-            lr_data_test = splits[i][1]
-
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)       
-            
-            lr = LogisticRegression(C=c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)                    
-
-
-            lr.fit(lr_data, splits_Y[i][0])
-            coeffs = numpy.abs(lr.coef_)
-
-            max_coefs = coeffs.max(axis=1)
-            remain_idxs = numpy.zeros((lr.coef_.shape[1],)).astype(bool)
-            for j in range(max_coefs.shape[0]):
-                remain_idxs = numpy.logical_or(remain_idxs,coeffs[j] >= max_coefs[j] * n) 
-
-            lr_data_tr = lr_data[:,remain_idxs]  
-            lr = LogisticRegression(C=c,
-                        fit_intercept=False,
-                        solver='lbfgs',
-                        max_iter=1000,
-                        multi_class='multinomial', n_jobs=-1)                    
-            lr.fit(lr_data_tr, splits_Y[i][0])
-            lr_data = lr_data_test
-            lr_data = mm.transform(lr_data)  
-            
-            y_pred_ = lr.predict(lr_data[:,remain_idxs])                        
-            tests.append(1. - accuracy_score(splits_Y[i][1],y_pred_))
-   
-    return c,n,numpy.asarray(tests).mean() + numpy.asarray(tests).std()           
-
-def testerL2_noise(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n,n2):
-    tests = []
-    orig_tests = []
-    for _ in range(5):
-        for i in range(len(splits)): 
-            tr = forests[i]
-            lr_data = splits[i][0]
-            lr_data_test = splits[i][1]
-            lr_data = tr.addNoise(lr_data,n2) 
-      
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)       
-            lr_data_test = mm.transform(lr_data_test)               
-
-            lr = LogisticRegression(C=c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)
-
-            lr.fit(lr_data, splits_Y[i][0])
-            
-            #print("fit train",c,n,n2)
-
-            to_remove,before,after = tr.prune(lr_data, lr.coef_, n)
-            lr_data = tr.do_prune(lr_data,to_remove)
-
-            lr = LogisticRegression(C=c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=1000,
-                            multi_class='multinomial', n_jobs=-1)                    
-            lr.fit(lr_data, splits_Y[i][0])
-            #print("fit test",c,n,n2)
-            
-            lr_data = tr.do_prune(lr_data_test,to_remove)
-            y_pred_ = lr.predict(lr_data)                         
-            tests.append(1. - accuracy_score(splits_Y[i][1],y_pred_))
-    return c,n,n2,numpy.asarray(tests).mean() + numpy.asarray(tests).std()
-
 def inter_log(*args):
     print (args)
     args_ = [str(a) for a in args]
@@ -307,7 +133,7 @@ class BaseCO2Forest:
         forest = self
         for i in range(self.n_estimators):
             tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
-            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
             min_samples_leaf = forest.min_samples_leaf, seed = None,\
             sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -421,300 +247,6 @@ class BaseCO2Forest:
         if self.reinforced:
             self.reinforce_prune(self.prune_level,self.reC,x,Y,sample_weights)
             
-        if self.cov_dr > 0:   
-            with open('forest.pickle', 'wb') as f:
-                pickle.dump(self, f)              
-            #cprobs = self.sequential_predict_proba(x,use_weight=False)
-            #r2 = cov(numpy.hstack([cprobs[:,:,layer] for layer in range(1,cprobs.shape[2])]))
-            #r2 = numpy.sqrt(r2.sum()) 
-
-            kf = StratifiedKFold(n_splits=3, shuffle=True)
-            #kf = KFold(n_splits=3, shuffle=True)
-            self.splits = []
-            self.splits_Y = []
-            self.main_inds_train = self.getIndicators(x)
-            self.main_inds_test = self.getIndicators(x_test)
-            self.forests = []
-            
-            inter_log("Training forests")
-            for train, test in kf.split(x,Y):         
-                tr = CO2Forest(C=self.C, dual=self.dual,
-                                 tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
-                                 max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
-                                 feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,
-                                 gamma=self.gamma,dropout_low=self.dropout_low,dropout_high=self.dropout_high,
-                                 noise=self.noise,cov_dr=0,criteria=self.criteria,spatial_mul=self.spatial_mul)
-                tr.fit(csr_matrix(x[train]),Y[train])
-                #self.forests.append(tr.eliminatedForest())
-                self.forests.append(tr)
-                self.splits_Y.append([Y[train],Y[test]])
-                self.splits.append([tr.getIndicators(x[train]),tr.getIndicators(x[test])])
-                #del tr
-                
-                with open('forest.pickle', 'wb') as f:
-                    pickle.dump(self, f)                 
-                
-            inter_log("Done")   
-    
-    def    do_tests(self,x,Y,x_test, Y_test):       
-            Y = self.le.transform(Y)
-            Y_test = self.le.transform(Y_test)
-        
-            best = 1.
-            best_c = 0
-            best_n = 0
-            best_n2 = 0
-            best_r3 = 0
-            best_before = 0
-            best_after = 0
-            
-            splits = self.splits
-            splits_Y = self.splits_Y
-            
-            tests = Parallel(n_jobs=5,backend="multiprocessing")(delayed(testerL2_noise)(self.splits,self.splits_Y,self.forests,x,Y,x_test,Y_test,c,n,n2) for n2 in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9] for n in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9] for c in [0.01,0.1,1.0,10])            
-            
-            for c,n,n2,t in tests:
-                if t < best:
-                    inter_log ("New best:",t,c,n,n2)                            
-                    best = t  
-                    best_c = c
-                    best_n = n  
-                    best_n2 = n2
-                     
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)            
-            
-            lr_data = self.addNoise(self.main_inds_train,best_n2)
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)       
-             
-            lr.fit(lr_data, Y) 
-            
-            to_remove,best_before,best_after = self.prune(lr_data, lr.coef_, best_n)
-            lr_data = self.do_prune(lr_data,to_remove)            
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1) 
-            lr.fit(lr_data, Y)  
-            #best_r3 = self.get_cov(lr_data, lr.coef_) 
-
-            lr_data = mm.transform(self.main_inds_test)              
-            
-            lr_data = self.do_prune(lr_data,to_remove)
-            y_pred_ = lr.predict(lr_data)    
-            best = 1. - accuracy_score(Y_test,y_pred_)
-            best_f1 = f1_score(y_pred_,Y_test,average=None) 
-            best_f1m = f1_score(y_pred_,Y_test,average='macro')            
-            inter_log ("LR l2-norm pruning + noise test result:", best, "f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n, "noise:", best_n2,"instability before:", best_before, "instability after:", best_after)              
-            
-            best = 1.
-            best_c = 0
-            for c in [0.01,0.1,1.0,10]:
-                tests = []
-                orig_tests = []
-                for i in range(len(splits)): 
-                    tr = self.forests[i]
-
-                    lr_data = splits[i][0]
-                    mm = make_pipeline(MinMaxScaler(), Normalizer())
-                    mm.fit(lr_data)
-
-                    lr_data = mm.transform(lr_data)                       
-                    
-                    lr = LogisticRegression(C=c,
-                                    fit_intercept=False,
-                                    solver='lbfgs',
-                                    max_iter=100,
-                                    multi_class='multinomial', n_jobs=-1)
-
-                    lr.fit(lr_data, splits_Y[i][0])
-                    lr_data = splits[i][1]
-
-                    lr_data = mm.transform(lr_data)                       
-
-                    y_pred_ = lr.predict(lr_data)                 
-                    tests.append(1. - accuracy_score(splits_Y[i][1],y_pred_))
-
-                if numpy.asarray(tests).mean() + numpy.asarray(tests).std() < best:
-                    inter_log ("New best:",numpy.asarray(tests).mean(), numpy.asarray(tests).std(), c)
-                    best = numpy.asarray(tests).mean() + numpy.asarray(tests).std()
-                    best_c = c
-                    
-            lr_data = self.main_inds_train
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)               
-            
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)
-
-            lr.fit(lr_data, Y)
-            #best_r3 = self.get_cov(lr_data, lr.coef_)            
-            lr_data = self.main_inds_test
-
-            lr_data = mm.transform(lr_data)               
-            y_pred_ = lr.predict(lr_data)    
-            best = 1. - accuracy_score(Y_test,y_pred_)                
-            best_f1 = f1_score(y_pred_,Y_test,average=None)
-            best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR orig test result:", best,"f1:",best_f1,best_f1m,"C:", best_c)            
-            
-            best = 1.
-            best_c = 0
-            best_n = 0
-            best_r3 = 0                
-            tests = Parallel(n_jobs=5,backend="multiprocessing")(delayed(testerNoise)(self.splits,self.splits_Y,self.forests,x,Y,x_test,Y_test,c,n) for n in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9] for c in [0.01,0.1,1.0,10])            
-            
-            for c,n,t in tests:
-                if t < best:
-                    inter_log ("New best:",t,c,n)   
-                    best = t  
-                    best_c = c
-                    best_n = n  
-                
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)
-            
-            lr_data = self.addNoise(self.main_inds_train, best_n)     
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)               
-            
-            lr.fit(lr_data, Y)
-            #est_r3 = self.get_cov(lr_data, lr.coef_) 
-            lr_data = self.main_inds_test
-
-            lr_data = mm.transform(lr_data)               
-            
-            y_pred_ = lr.predict(lr_data)    
-            best = 1. - accuracy_score(Y_test,y_pred_)
-            best_f1 = f1_score(y_pred_,Y_test,average=None)
-            best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR noised test result:", best,"f1:" ,best_f1,best_f1m,"C:", best_c, "noise:", best_n)
-            
-            best = 1.
-            best_c = 0
-            best_n = 0
-            best_r3 = 0
-            
-            tests = Parallel(n_jobs=5,backend="multiprocessing")(delayed(testerNaive)(self.splits,self.splits_Y,self.forests,x,Y,x_test,Y_test,c,n) for n in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9] for c in [0.01,0.1,1.0,10])            
-            
-            for c,n,t in tests:
-                if t < best:
-                    inter_log ("New best:",t,c,n)   
-                    best = t  
-                    best_c = c
-                    best_n = n  
-                
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)            
-            
-            lr_data = self.main_inds_train
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)               
-            
-            lr.fit(lr_data, Y)            
-            coeffs = numpy.abs(lr.coef_)
-
-            max_coefs = coeffs.max(axis=1)
-            remain_idxs = numpy.zeros((lr.coef_.shape[1],)).astype(bool)
-            for i in range(max_coefs.shape[0]):
-                remain_idxs = numpy.logical_or(remain_idxs,coeffs[i] >= max_coefs[i] * best_n) 
-                    
-            lr_data = lr_data[:,remain_idxs] 
-          
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)   
-            lr.fit(lr_data, Y)
-            #est_r3 = self.get_cov(lr_data, lr.coef_) 
-            lr_data = self.main_inds_test
-
-
-            lr_data = mm.transform(lr_data)               
-            y_pred_ = lr.predict(lr_data[:,remain_idxs])    
-            best = 1. - accuracy_score(Y_test,y_pred_)
-            best_f1 = f1_score(y_pred_,Y_test,average=None) 
-            best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR naive pruning test result:", best,"f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n)  
-            
-            best = 1.
-            best_c = 0
-            best_n = 0
-            best_r3 = 0
-            best_before = 0
-            best_after = 0
-            tests = Parallel(n_jobs=5,backend="multiprocessing")(delayed(testerL2)(self.splits,self.splits_Y,self.forests,x,Y,x_test,Y_test,c,n) for n in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9] for c in [0.01,0.1,1.0,10])            
-            
-            for c,n,t in tests:
-                if t < best:
-                    inter_log ("New best:",t,c,n)                            
-                    best = t  
-                    best_c = c
-                    best_n = n  
-
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1)            
-            
-            lr_data = self.main_inds_train
-            mm = make_pipeline(MinMaxScaler(), Normalizer())
-            mm.fit(lr_data)
-
-            lr_data = mm.transform(lr_data)               
-            lr.fit(lr_data, Y) 
-            
-            to_remove,best_before,best_after = self.prune(lr_data, lr.coef_, best_n)
-            lr_data = self.do_prune(lr_data,to_remove)            
-            lr = LogisticRegression(C=best_c,
-                            fit_intercept=False,
-                            solver='lbfgs',
-                            max_iter=100,
-                            multi_class='multinomial', n_jobs=-1) 
-            lr.fit(lr_data, Y)  
-            #best_r3 = self.get_cov(lr_data, lr.coef_) 
-            lr_data = self.main_inds_test
-            lr_data = mm.transform(lr_data)               
-            lr_data = self.do_prune(lr_data,to_remove)
-            y_pred_ = lr.predict(lr_data)    
-            best = 1. - accuracy_score(Y_test,y_pred_)
-            best_f1 = f1_score(y_pred_,Y_test,average=None) 
-            best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR l2-norm pruning test result:", best,"f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n,"instability before:", best_before, "instability after:", best_after)              
-            
-            self.trees = Parallel(n_jobs=5,backend="multiprocessing")(delayed( weighter)(i,self,numpy.ones(self.n_estimators,)) for i in range(self.n_estimators))
-            y_pred_ = self.predict(csr_matrix(x_test))
-            rs_local = accuracy_score(Y_test,y_pred_)
-            y_pred_ = self.predict(x)
-            rs_train = accuracy_score(Y,y_pred_)
-            inter_log ("Train error orig:", 1. - rs_train)    
-            inter_log ("Test error orig:", 1. - rs_local)    
-            inter_log ("Delta orig:", rs_train - rs_local)
-
     def sequential_predict(self,x,use_weight=True):
         probas = []
         for tree in self.trees:
@@ -762,7 +294,7 @@ class BaseCO2Forest:
         save('/dev/shm/'+ uuids + "trainPtrX",self.train_data.indptr)            
         
 
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,train_data.shape,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,self.train_data.shape,t,noise,balance_noise) for t in self.trees)
 
         os.remove('/dev/shm/'+ uuids + "DataX.npy")
         os.remove('/dev/shm/'+ uuids + "IndX.npy")
@@ -850,17 +382,16 @@ class BaseCO2Forest:
                     return asarray(res)#[:,1:]
 
         
-    def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0.,\
-                 criteria='gini',spatial_mul=1.0,reinforced = False, prune_level = 0.,reC=10,id_=0,univariate_ratio=0.0):
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0):
         self.criteria = criteria
         self.C = C
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel
-        self.max_deth = max_deth
+        self.max_depth = max_depth
         self.n_estimators = n_estimators 
         self.n_jobs = n_jobs
         self.trees = []
@@ -870,12 +401,6 @@ class BaseCO2Forest:
         self.dual = dual
         self.max_iter = max_iter
         self.feature_ratio=feature_ratio
-        self.intercept_scaling = intercept_scaling 
-        self.dropout_low = dropout_low
-        self.dropout_high = dropout_high 
-        self.noise = noise
-        #os.environ["OPENBLAS_NUM_THREADS"] = "1"
-        self.cov_dr = cov_dr 
         self.spatial_mul = spatial_mul
         self.prune_level = 0
         self.reC = 10.
@@ -885,8 +410,20 @@ class BaseCO2Forest:
 
 
 class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
-    pass
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+                 dual=True,max_iter=1000000,
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0):
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio)
 
 class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
-    pass
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+                 dual=True,max_iter=1000000,
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
+                 gamma=1000.,criteria='mse',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0):
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio)
 

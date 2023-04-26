@@ -75,7 +75,7 @@ def fitter(uuids,forest,shapex,seed_,gpu_lookup):
     #gpu_id = gpu_lookup[pid]
         
     tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
-    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = None,\
      sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -308,7 +308,7 @@ class CO2Forest:
         forest = self
         for i in range(self.n_estimators):
             tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
-            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
             min_samples_leaf = forest.min_samples_leaf, seed = None,\
             sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -333,7 +333,7 @@ class CO2Forest:
             for train, test in kf.split(x,Y):         
                 tr = CO2Forest(C=self.C, dual=self.dual,
                                 tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
-                                max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
+                                max_deth=self.max_depth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
                                 feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,
                                 gamma=self.gamma,dropout_low=self.dropout_low,dropout_high=self.dropout_high,
                                 noise=self.noise,cov_dr=0,criteria=self.criteria)
@@ -651,7 +651,7 @@ class CO2Forest:
             for train, test in kf.split(x,Y):         
                 tr = CO2Forest(C=self.C, dual=self.dual,
                                 tol = self.tol,max_iter=self.max_iter,kernel=self.kernel,
-                                max_deth=self.max_deth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
+                                max_deth=self.max_depth,n_jobs=self.n_jobs,sample_ratio=self.sample_ratio, 
                                 feature_ratio = self.feature_ratio,n_estimators=self.n_estimators,
                                 gamma=self.gamma,dropout_low=self.dropout_low,dropout_high=self.dropout_high,
                                 noise=self.noise,cov_dr=0,criteria=self.criteria)
@@ -981,7 +981,7 @@ class CO2Forest:
                 return asarray(res)
 
         
-    def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini'):
         self.criteria = criteria
@@ -989,7 +989,7 @@ class CO2Forest:
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel
-        self.max_deth = max_deth
+        self.max_depth = max_depth
         self.n_estimators = n_estimators 
         self.n_jobs = n_jobs
         self.trees = []

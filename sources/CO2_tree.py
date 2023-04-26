@@ -68,7 +68,7 @@ class BaseCO2Tree:
                 self.old_processed_counter = self.processed_counter
         nnz = count_nonzero(sample_weight)
 
-        if  self.max_deth is None or deth <= self.max_deth: 
+        if  self.max_depth is None or deth <= self.max_depth: 
             if nnz >= self.min_samples_split: 
                 if not self.clearNode(Y, sample_weight):
                     #print "deth:", deth
@@ -160,14 +160,9 @@ class BaseCO2Tree:
                     sample_weight = ones(shape=(1,x.shape[0]),dtype = int8)
                 self.nodes = []
 
-                #dataf = [1] * x.shape[1]
-                #colsf = range(x.shape[1])
-                #rowsf = [0] * x.shape[1]
-                #features_weight = csr_matrix((dataf,(rowsf,colsf)) ,shape=(1,x.shape[1]),dtype = int8)
                 if self.spatial_mul < 1.:
                     features_weight = numpy.zeros((x.shape[1],))
                     m = int(numpy.sqrt(x.shape[1]))
-                    rest = 1. - self.spatial_mul
                     i = numpy.random.randint(0,int((1 - self.spatial_mul)*m))
                     j = numpy.random.randint(0,int((1 - self.spatial_mul)*m))
                     for i_ in range(i,i + int(self.spatial_mul*m)):
@@ -297,14 +292,14 @@ class BaseCO2Tree:
         return asarray(res)
     
     def getProbs(self):
-        res = numpy.zeros((pow(2,self.max_deth-1),))
+        res = numpy.zeros((pow(2,self.max_depth-1),))
         for i,lidx in enumerate(self.leaves):
             res[i] = self.nodes[lidx].prob
         return res  
     
     def getIndicators(self,x, train_data = None,noise = 0., balance_noise = False):
         _, lids = self.predict_proba(x, Y = None,train_data=train_data,preprocess = False, stat_only = False, use_weight = False,return_leaf_id = True)
-        max_ind = int(lids.max()) + 1        
+    
         self.leaves_number = 0
         for s in self.structure:
             if s[0] == -1:
@@ -335,28 +330,25 @@ class BaseCO2Tree:
 
     def estimateChunkWeights(self, w):
         if isinstance(w, collections.Iterable):
-            for i,lidx in enumerate(self.leaves):
-                #print("Re-weight w!:", w[self.nodes[lidx].leaf_id],w[self.nodes[lidx].leaf_id + 1])                
+            for _,lidx in enumerate(self.leaves):
                 self.nodes[lidx].chunk_weight = 1
                 self.nodes[lidx].p0 = w[self.nodes[lidx].leaf_id]
                 self.nodes[lidx].p1 = w[self.nodes[lidx].leaf_id + 1]
         else:
-            for i,lidx in enumerate(self.leaves):
+            for _,lidx in enumerate(self.leaves):
                 self.nodes[lidx].chunk_weight = w
             
                 
-    def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_deth = None, \
+    def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
                  min_samples_split = 2, min_samples_leaf = 1, seed = None, \
-                 sample_ratio=1.0,feature_ratio=1.0,gamma=10.,intercept_scaling=1.,dropout_low=0., dropout_high=0.9, noise=0., cov_dr=0.,criteria='gini',
-                spatial_mul=1.0):
+                 sample_ratio=1.0,feature_ratio=1.0,gamma=10.,criteria='gini', spatial_mul=1.0):
         self.criteria = criteria 
         self.leaves = []
-        self.max_deth = max_deth
+        self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel
         self.tol = tol
-        #self.seed = seed
         self.C = C
         self.gamma = gamma
         self.max_iter = max_iter
@@ -366,20 +358,29 @@ class BaseCO2Tree:
         self.processed_counter = 0
         self.old_processed_counter = 0
         self.dual = dual
-        self.intercept_scaling = intercept_scaling
-        self.dropout_low = dropout_low
-        self.dropout_high = dropout_high
-        self.noise = noise 
         self.leaves_number = 0
-        self.cov_dr = cov_dr
         self.spatial_mul = spatial_mul
         self.seed = seed
-        #if seed:
-        #    random.seed(seed)
+
         
 class CO2TreeClassifier(BaseCO2Tree, ClassifierMixin):
-    pass
+    def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
+                 min_samples_split = 2, min_samples_leaf = 1, seed = None, \
+                 sample_ratio=1.0,feature_ratio=1.0,gamma=10.,\
+                 criteria='gini', spatial_mul=1.0):
+        super().__init__(C, tol, max_iter,kernel, dual,max_depth, \
+                 min_samples_split, min_samples_leaf, seed, \
+                 sample_ratio,feature_ratio,gamma, \
+                 criteria, spatial_mul)
 
 class CO2TreeRegressor(BaseCO2Tree, RegressorMixin):
-    pass
+    def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
+                 min_samples_split = 2, min_samples_leaf = 1, seed = None, \
+                 sample_ratio=1.0,feature_ratio=1.0,gamma=10., \
+                criteria='mse', spatial_mul=1.0):
+        super().__init__(C, tol, max_iter,kernel, dual,max_depth, \
+                 min_samples_split, min_samples_leaf, seed, \
+                 sample_ratio,feature_ratio,gamma, \
+                 criteria, spatial_mul)
+
 

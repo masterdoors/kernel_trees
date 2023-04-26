@@ -71,7 +71,7 @@ class CO2Tree:
                 self.old_processed_counter = self.processed_counter
         nnz = count_nonzero(sample_weight)
 
-        if  self.max_deth is None or deth <= self.max_deth: 
+        if  self.max_depth is None or deth <= self.max_depth: 
             if nnz >= self.min_samples_split: 
                 if not self.clearNode(Y, sample_weight):
                     #print "deth:", deth
@@ -298,7 +298,7 @@ class CO2Tree:
         return asarray(res)
     
     def getProbs(self):
-        res = numpy.zeros((pow(2,self.max_deth-1),))
+        res = numpy.zeros((pow(2,self.max_depth-1),))
         for i,lidx in enumerate(self.leaves):
             res[i] = self.nodes[lidx].prob
         return res  
@@ -340,14 +340,14 @@ class CO2Tree:
                 self.nodes[lidx].chunk_weight = w
             
                 
-    def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_deth = None, \
+    def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
                  min_samples_split = 2, min_samples_leaf = 1, seed = None, \
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10.,intercept_scaling=1.,dropout_low=0.,\
                  dropout_high=0.9, noise=0., cov_dr=0.,criteria='gini',tree_number = 0):
         self.criteria = criteria 
         self.tree_number = tree_number
         self.leaves = []
-        self.max_deth = max_deth
+        self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel

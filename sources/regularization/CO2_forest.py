@@ -70,7 +70,7 @@ def fitter(uuids,forest,shapex,seed_):
     #    k = 'gaussian'
         
     tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
-    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = None,\
      sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -141,7 +141,7 @@ class CO2Forest:
         forest = self
         for i in range(self.n_estimators):
             tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
-            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_deth,\
+            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
             min_samples_leaf = forest.min_samples_leaf, seed = None,\
             sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -550,7 +550,7 @@ class CO2Forest:
             #    for f in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
             #        for n in [0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]:
             #            lr = CO2Forest(C=c, dual=False,tol = 0.0001,max_iter=2000000000,
-            #                            kernel='linear',max_deth=2,n_jobs=10,sample_ratio=1.0,
+            #                            kernel='linear',max_depth=2,n_jobs=10,sample_ratio=1.0,
             #                            feature_ratio = f,n_estimators=10,gamma=5,dropout_low=n,dropout_high=1.0,
             #                            noise=0.,cov_dr=0,criteria='gain')
 
@@ -685,7 +685,7 @@ class CO2Forest:
                 return asarray(res)
 
         
-    def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini'):
         self.criteria = criteria
@@ -693,7 +693,7 @@ class CO2Forest:
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel
-        self.max_deth = max_deth
+        self.max_depth = max_depth
         self.n_estimators = n_estimators 
         self.n_jobs = n_jobs
         self.trees = []

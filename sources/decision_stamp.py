@@ -4,52 +4,17 @@ Created on 26 марта 2016 г.
 @author: keen
 '''
 
-from numpy import random
-from numpy import zeros
-from numpy import ones
+
 from numpy.random import randint
-import pickle
-import uuid
 import traceback
-import os
-
-from numpy import sign
-from numpy import transpose
-from numpy import linalg
 from scipy.sparse import csr_matrix
-from numpy import int8
-from numpy import float64
-from numpy import int64
-from numpy import exp
-from numpy import multiply
-from numpy import asarray
-
-from numpy import abs
-
-from numpy import where
-from numpy import argsort
-
-from numpy import count_nonzero
-from numpy import log
-
-from numpy import bincount
-from numpy import nonzero
 from scipy.sparse import coo_matrix
-from numpy import intersect1d
 from copy import deepcopy
-from numpy import save
-from numpy import float64
-from numpy import unique
-from numpy import absolute
-from numpy import apply_along_axis
-
 import numpy as np
 
 import math
-import time
 
 from sklearn.linear_model import SGDClassifier
-#from SVM import SVM, polynomial_kernel, gaussian_kernel
 from sklearn.preprocessing import LabelEncoder
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
@@ -58,7 +23,6 @@ from sklearn.cluster import KMeans
 from sklearn.base import ClassifierMixin
 from sklearn.base import RegressorMixin
 
-import numpy
 from sympy.utilities.iterables import multiset_permutations
 #import linearSVM
 
@@ -73,8 +37,8 @@ from CO2_criteria import *
 class BaseDecisionStamp:
 
     def swap_rows(self, mat, a, b):
-        a_idx = where(mat.indices == a)
-        b_idx = where(mat.indices == b)
+        a_idx = np.where(mat.indices == a)
+        b_idx = np.where(mat.indices == b)
         mat.indices[a_idx] = b
         mat.indices[b_idx] = a
         return mat.asformat(mat.format)                                      
@@ -91,10 +55,10 @@ class BaseDecisionStamp:
         self.counts = numpy.zeros((x.shape[0],))
         if x.shape[0] > 0:
             sample_idx = sample_weight > 0
-            sample_idx_ran = asarray(range(x.shape[0]))[sample_idx.reshape(-1)]
+            sample_idx_ran = np.asarray(range(x.shape[0]))[sample_idx.reshape(-1)]
             Y_tmp = Y[sample_idx.reshape(-1)]
             #x_tmp = csr_matrix(x[sample_idx.reshape(-1)],dtype=np.float32)
-            rng = random.default_rng(self.seed)#+abs(int(x_tmp.sum())))
+            rng = np.random.default_rng(self.seed)#+abs(int(x_tmp.sum())))
 
             #sample X and Y
             if self.sample_ratio*x.shape[0] > 10:
@@ -105,7 +69,7 @@ class BaseDecisionStamp:
                 #x_ = csr_matrix(x_tmp[idxs],dtype=np.float32)
                 Y_ = Y_tmp[idxs]
                     
-                diff_y = unique(Y_)
+                diff_y = np.unique(Y_)
                 if diff_y.shape[0] > 1:
                     #x_tmp = x_
                     sample_idx_ran = sample_idx_ran[idxs]
@@ -118,14 +82,13 @@ class BaseDecisionStamp:
                 self.counts[to_add_cnt] += 1
             
             def nu(arr):
-                return asarray([1 + unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
+                return np.asarray([1 + np.unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
             
-            #nonzero_idxs = unique(x_tmp.nonzero()[1]) 
             counts_p = nu(csc_matrix(x[sample_idx_ran]))
-            pos_idx = where(counts_p > 1)[0]
+            pos_idx = np.where(counts_p > 1)[0]
             
             if self.features_weight is not None:
-                f_idx = where(self.features_weight > 0)[0]
+                f_idx = np.where(self.features_weight > 0)[0]
                 pos_idx =list(set(pos_idx).intersection(set(f_idx)))
                 fw_size = int(self.features_weight[self.features_weight > 0].shape[0]* self.feature_ratio)
             else:
@@ -139,9 +102,6 @@ class BaseDecisionStamp:
             if fw_size == 0:
                 return 0.
             self.sample_weight = sample_idx_ran 
-            #x_tmp = csr_matrix(x_tmp[:,self.features_weight],dtype=np.float32)
-            
-            #print (x_tmp.shape,fw_size)
 
             H, deltas = self.setupSlackRescaling(Y_tmp)
                 
@@ -149,7 +109,6 @@ class BaseDecisionStamp:
                 if self.kernel == 'linear':
                     if not self.dual:
                         self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
-                        #self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
                         self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weight=deltas)
                     else:  
                         self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
@@ -180,10 +139,9 @@ class BaseDecisionStamp:
 #public:
 
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
-                 sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,max_iter=1000,gamma=1000.,intercept_scaling=1.,dropout_low=0.1, dropout_high=0.9, balance=True,noise=0.,cov_dr=0., criteria="gini",seed=None):
-        
-        coin = randint(0,2)
-        
+                 sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
+                 max_iter=1000,gamma=1000.,\
+                 balance=True,criteria="gini",seed=None):
         if criteria == "gain":
             self.criteria_str = 'entropy'
             self.criteria = criteriaIG
@@ -201,7 +159,6 @@ class BaseDecisionStamp:
         self.tol = tol
         self.n_classes = n_classes
         self.class_max = class_max
-        #self.features_weight = deepcopy(features_weight)
         self.C = C
         self.gamma = gamma
         self.sample_ratio = sample_ratio
@@ -209,12 +166,8 @@ class BaseDecisionStamp:
         self.max_iter = max_iter
         self.dual = dual
         self.feature_ratio = feature_ratio
-        self.intercept_scaling = intercept_scaling
-        self.dropout_low = dropout_low
-        self.dropout_high = dropout_high  
         self.balance = balance
-        self.noise = noise
-        self.cov_dr = cov_dr 
+
         self.chunk_weight = 1.0 
         self.leaf_id = -1
         self.features_weight = deepcopy(features_weight)
@@ -227,19 +180,18 @@ class BaseDecisionStamp:
         self.class_map_inv = class_map_inv
         
         gres = self.optimization(x,Y,sample_weight,counts)
-        #x = deepcopy(x)
-        sample_weightL = zeros(shape=sample_weight.shape,dtype = int8)
-        sample_weightR = zeros(shape=sample_weight.shape,dtype = int8)
+        sample_weightL = np.zeros(shape=sample_weight.shape,dtype = np.int8)
+        sample_weightR = np.zeros(shape=sample_weight.shape,dtype = np.int8)
         
         self.prob = float(sample_weight.sum()) / sample_weight.shape[1]
         self.instability = instability + 1./ self.prob
 
         if gres > 0:        
             sign_matrix_full = self.stamp_sign(x,x)
-            sign_matrix = multiply(sample_weight.reshape(-1), sign_matrix_full)
-            signs = asarray(sign_matrix)
-            colsL = where(signs < 0.0)[0]
-            colsR = where(signs > 0.0)[0]
+            sign_matrix = np.multiply(sample_weight.reshape(-1), sign_matrix_full)
+            signs = np.asarray(sign_matrix)
+            colsL = np.where(signs < 0.0)[0]
+            colsR = np.where(signs > 0.0)[0]
             sample_weightL[0,colsL] = 1       
             sample_weightR[0,colsR] = 1  
             self.probL = float(sample_weightL.sum()) / sample_weight.shape[1]
@@ -249,23 +201,21 @@ class BaseDecisionStamp:
         return gres, sample_weightL, sample_weightR        
     
     def stamp_sign(self,x,train_data, sample = True):
-        cur_id = str(uuid.uuid4())     
-        
         if sample:
             if self.kernel == 'linear' or self.kernel == 'univariate':
-                return sign(self.model.predict(x[:,self.features_weight]))
+                return np.sign(self.model.predict(x[:,self.features_weight]))
             else:  
                 res = self.model.predict(x[:,self.features_weight], train_data[self.sample_weight][:,self.features_weight])
-                return sign(res)
+                return np.sign(res)
         else:
             if self.kernel == 'linear' or self.kernel == 'univariate':
-                return sign(self.model.predict(x))
+                return np.sign(self.model.predict(x))
             else:  
                 res = self.model.predict(x, train_data[self.sample_weight][:,self.features_weight])
-                return sign(res)            
+                return np.sign(res)            
 
     def predict_stat(self,x,sample = True):
-        res = zeros((x.shape[0],self.class_max + 1))
+        res = np.zeros((x.shape[0],self.class_max + 1))
 
         sgns = self.stamp_sign(x,sample)
 
@@ -275,18 +225,11 @@ class BaseDecisionStamp:
         return res
 
     def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-        res = zeros((x.shape[0],self.class_max + 1))
-        leaf_ids =  zeros((x.shape[0],))
+        res = np.zeros((x.shape[0],self.class_max + 1))
+        leaf_ids =  np.zeros((x.shape[0],))
         sgns = self.stamp_sign(x, train_data, sample)
 
-        #print("chunk weight orig: ",self.p0, self.p1)
-        #print("chunk weight: ",self.p0*self.chunk_weight, self.p1*self.chunk_weight) 
-        
-        eps = 1e-6
-        #self.cov_dr
-        #print ("Use weight:", self.chunk_weight, self.p0,self.p1)
-        
-        if use_weight and self.cov_dr > 0: 
+        if use_weight: 
             res[sgns < 0] = self.p0*(self.chunk_weight)
             res[sgns >=0] = self.p1*(self.chunk_weight)
         else:
@@ -308,15 +251,35 @@ class BaseDecisionStamp:
         
 
 class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
+    def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
+                 sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
+                 max_iter=1000,gamma=1000.,\
+                 balance=True,criteria="gini",seed=None):
+        super().__init__(n_classes,class_max, features_weight, kernel, \
+                 sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed)
+        
+    def fit(self, x,Y, sample_weight,class_map,class_map_inv,counts, instability = 0):
+        super().fit(x,Y, sample_weight,class_map,class_map_inv,counts, instability)         
+    
+    
+    def stamp_sign(self,x,train_data, sample = True):
+        super().stamp_sign(x,train_data, sample)     
+
+    def predict_stat(self,x,sample = True):
+        super().predict_stat(x,sample)
+
+    def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
+        super().predict_proba(x,Y,train_data,sample, use_weight, get_id)        
+        
     def delta(self,H,Y):
         res = 0
         for s in (-1,+1):
             Hl = float(H[H==s].size) / H.size
-            index = asarray(range(H.shape[1]))
+            index = np.asarray(range(H.shape[1]))
             Hs_index = index[H[0,index] == s]
             for y in self.class_map_inv:
                 y_index = index[Y[index] == y]
-                common_ids = intersect1d(y_index, Hs_index) 
+                common_ids = np.intersect1d(y_index, Hs_index) 
                 if Hs_index.shape[0] != 0:
                     pj = float(common_ids.shape[0]) / Hs_index.shape[0]
                     res += Hl * pj * (1 - pj) 
@@ -336,12 +299,12 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
         for s in (-1,+1):
             Hl = float(H[H==s].size) / H.size
                 
-            index = asarray(range(H.shape[1]))
+            index = np.asarray(range(H.shape[1]))
             Hs_index = index[H[0,index] == s]
             
             for y in self.class_map_inv:
                 y_index = index[Y[index] == y]
-                common_ids = intersect1d(y_index, Hs_index) 
+                common_ids = np.intersect1d(y_index, Hs_index) 
                 IY[s][y] = common_ids.shape[0]
 
                 if Hs_index.shape[0] != 0:
@@ -370,23 +333,23 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
     def estimateTetas(self,x,Y,train_data):
         counts = self.n_classes
 
-        self.Teta0 = zeros((counts))
-        self.Teta1 = zeros((counts))
+        self.Teta0 = np.zeros((counts))
+        self.Teta1 = np.zeros((counts))
 
         signs = self.stamp_sign(x,train_data,sample = False)
 
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
             signs = signs.todense()
 
-        cl = asarray(multiply(signs,Y + 1))
+        cl = np.asarray(np.multiply(signs,Y + 1))
 
-        cl = cl[nonzero(cl)]
+        cl = cl[np.nonzero(cl)]
 
-        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
-        neg_cl = abs(cl[cl < 0.0]).astype(int64)
+        pos_cl = abs(cl[cl >= 0.0]).astype(np.int64)
+        neg_cl = abs(cl[cl < 0.0]).astype(np.int64)
 
-        lcount = bincount(neg_cl)
-        rcount = bincount(pos_cl)
+        lcount = np.bincount(neg_cl)
+        rcount = np.bincount(pos_cl)
 
         for i in range(1,len(lcount)):
                 self.Teta0[self.class_map[i - 1]] += float(lcount[i])
@@ -401,24 +364,24 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
             signs = signs.todense()        
        
-        cl = asarray(multiply(signs,Y))
+        cl = np.asarray(np.multiply(signs,Y))
         
         if isnan(cl).any():
             return 0.0
 
-        cl = cl[nonzero(cl)]
+        cl = cl[np.nonzero(cl)]
         
-        pos_cl = abs(cl[cl >= 0.0]).astype(int64)
-        neg_cl = abs(cl[cl < 0.0]).astype(int64)
-        cl = abs(cl).astype(int64)
+        pos_cl = np.abs(cl[cl >= 0.0]).astype(np.int64)
+        neg_cl = np.abs(cl[cl < 0.0]).astype(np.int64)
+        cl = abs(cl).astype(np.int64)
             
         gl = 0
         gr = 0
         ga = 0
         
-        lcount = bincount(neg_cl)
-        rcount = bincount(pos_cl)
-        acount = bincount(cl)
+        lcount = np.bincount(neg_cl)
+        rcount = np.bincount(pos_cl)
+        acount = np.bincount(cl)
         
         if report:
             #print "Classes:",  acount
@@ -443,9 +406,9 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
             return 0.    
     
     def setupSlackRescaling(self,Y_tmp):
-        H = zeros(shape = (1,Y_tmp.shape[0]))        
+        H = np.zeros(shape = (1,Y_tmp.shape[0]))        
   
-        class_counts = unique(Y_tmp, return_counts=True)
+        class_counts = np.unique(Y_tmp, return_counts=True)
         class_counts = numpy.asarray(list(zip(class_counts[0],class_counts[1])))
 
         class2side = {}
@@ -542,7 +505,7 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
 
         gini_best = gini_old - gini_best
 
-        deltas = zeros(shape=(H.shape[1]))
+        deltas = np.zeros(shape=(H.shape[1]))
         #deltas = ones(shape=(H.shape[1])) 
         for i in range(H.shape[1]):
             gini_i = self.delta_wise(Hsize, IH,IY,Y_tmp[i],-H[0,i],self.criteria)
@@ -557,7 +520,7 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
 
         dm = deltas.max()
         if deltas.max() == 0:
-            deltas = ones(shape=(H.shape[1]))  
+            deltas = np.ones(shape=(H.shape[1]))  
         else:
             deltas = (deltas / dm)*ratio 
         return H, deltas
@@ -567,14 +530,14 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
 
         self.estimateTetas(x[self.sample_weight][:, self.features_weight], Y_tmp,x) 
 
-        self.p0 = zeros(shape=(self.class_max + 1))
-        self.p1 = zeros(shape=(self.class_max + 1))
+        self.p0 = np.zeros(shape=(self.class_max + 1))
+        self.p1 = np.zeros(shape=(self.class_max + 1))
 
         sum_t0 = self.Teta0.sum()
         sum_t1 = self.Teta1.sum()
 
         if sum_t0 > 0: 
-            p0_ = multiply(self.Teta0, 1. / sum_t0)                
+            p0_ = np.multiply(self.Teta0, 1. / sum_t0)                
 
             for i in range(len(p0_)):
                 self.p0[self.class_map_inv[i]] = p0_[i]
@@ -583,7 +546,7 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
             #self.p0 = exp_0 / exp_0.sum()
 
         if sum_t1 > 0:       
-            p1_ = multiply(self.Teta1, 1. / sum_t1)
+            p1_ = np.multiply(self.Teta1, 1. / sum_t1)
 
             for i in range(len(p1_)):
                 self.p1[self.class_map_inv[i]] = p1_[i]  
@@ -595,6 +558,22 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
         return gini_res
                           
 class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
+    def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
+                 sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
+                 max_iter=1000,gamma=1000.,\
+                 balance=True,criteria="mse",seed=None):
+        super().__init__(n_classes,class_max, features_weight, kernel, \
+                 sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed)
+        
+    def stamp_sign(self,x,train_data, sample = True):
+        super().stamp_sign(x,train_data, sample)     
+
+    def predict_stat(self,x,sample = True):
+        super().predict_stat(x,sample)
+
+    def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
+        super().predict_proba(x,Y,train_data,sample, use_weight, get_id)           
+    
     def calcCriterion(self,x,Y, train_data,report = False):  
         H = self.stamp_sign(x, train_data, sample = False)
         return self.criteriaMSE(Y.mean(),Y) - self.criteriaMSE(self.p0,Y[H == 1]) - self.criteriaMSE(self.p1,Y[H == -1])          
@@ -603,7 +582,7 @@ class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         k = KMeans(n_clusters=2)
         H = k.fit_predict(Y_tmp.reshape(-1,1))*2 - 1    
 
-        deltas = zeros(shape=(H.shape[0]))
+        deltas = np.zeros(shape=(H.shape[0]))
 
         orig_criterion = self.criteriaMSE(Y_tmp[H == -1].mean(),Y_tmp[H == -1]) + self.criteriaMSE(Y_tmp[H == 1].mean(),Y_tmp[H == 1])
         for i in range(H.shape[0]):
@@ -621,7 +600,7 @@ class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
 
         dm = deltas.max()
         if deltas.max() == 0:
-            deltas = ones(shape=(H.shape[1]))  
+            deltas = np.ones(shape=(H.shape[1]))  
         else:
             deltas = (deltas / dm)*ratio   
         return H, deltas   

@@ -44,7 +44,7 @@ def fitter_(self,sample_weight,addr):
     self.trees = []
     for _ in range(self.n_estimators):
         tree = CO2Tree(C=self.C , kernel=self.kernel,\
-        tol=self.tol, max_iter=self.max_iter,max_depth = self.max_deth,\
+        tol=self.tol, max_iter=self.max_iter,max_depth = self.max_depth,\
         min_samples_split = self.min_samples_split,dual=self.dual,\
         min_samples_leaf = self.min_samples_leaf, seed = None,\
         sample_ratio = self.sample_ratio, feature_ratio = self.feature_ratio, \
@@ -89,7 +89,7 @@ class CO2Forest:
                     'dropout_high': self.dropout_high,
                     'balance': self.balance,
                     'criteria': self.criteria,
-                    'max_depth':self.max_deth,
+                    'max_depth':self.max_depth,
                     }
           
         fitter_(self,x,Y,problem,self.cluster_cgf,self.res_name,self.addr)  
@@ -172,7 +172,7 @@ class CO2Forest:
                 return asarray(res)
 
         
-    def __init__(self,C, kernel = 'linear', max_deth = None, tol = 0.001, min_samples_split = 2, \
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000, cluster_cfg = 'servers.yml',
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,gamma=1000.,
                  intercept_scaling=1.,dropout_low=0.,dropout_high=1.0,noise=0.,cov_dr=0., criteria='gini', db_name='work_queue',\
@@ -182,7 +182,7 @@ class CO2Forest:
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel
-        self.max_deth = max_deth
+        self.max_depth = max_depth
         self.n_estimators = n_estimators 
         self.n_jobs = n_jobs
         self.trees = []

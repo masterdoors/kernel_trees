@@ -68,7 +68,7 @@ class CO2Tree:
                     'dropout_high': self.dropout_high,
                     'balance': self.balance,
                     'criteria': self.criteria,
-                    'max_depth':self.max_deth,
+                    'max_depth':self.max_depth,
                     }
           
         fit_(self,x,Y,problem,clusterCfg,self.res_name,self.addr,preprocess,sample_weight)        
@@ -148,7 +148,7 @@ class CO2Tree:
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10.,intercept_scaling=1.,dropout_low=0., dropout_high=0.9, noise=0., cov_dr=0.,criteria='gini'):
         self.criteria = criteria 
         self.leaves = []
-        self.max_deth = max_depth
+        self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.kernel = kernel
