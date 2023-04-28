@@ -33,6 +33,5 @@ pip install git+https://github.com/masterdoors/kernel_trees.git
 1. Install the fork of ThunderSVM (It supports sample_weights): https://github.com/masterdoors/thundersvm
 2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
 ## Cascade Forests
-1. Install dependences
-2. Go to sources/cascade. Run setup.py install
-3. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
+1. Go to sources/cascade. Run setup.py install
+2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
