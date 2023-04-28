@@ -61,7 +61,7 @@ class BaseCO2Tree:
 
     #@profile
     def buildTree(self, tol, C, x, Y, structure, sample_weight, features_weight, deth,balanced,sam_counts,instability=0):
-        
+        assert self.decisionStampClass is not None
         if self.processed_counter > 0:
             if self.old_processed_counter != self.processed_counter:
                 #print "Already processed: ", self.processed_counter
@@ -81,9 +81,9 @@ class BaseCO2Tree:
                         sample_ratio = self.sample_ratio
 
                     
-                    ds = dst.DecisionStamp(self.n_classes,self.class_max, features_weight,\
+                    ds = self.decisionStampClass(self.n_classes,self.class_max, features_weight,\
                                            self.kernel, sample_ratio,self.feature_ratio,\
-                                           self.dual,C/cf,tol,self.max_iter,self.gamma,self.intercept_scaling,self.dropout_low,self.dropout_high,balanced,self.noise,self.cov_dr, self.criteria,seed=self.seed)
+                                           self.dual,C/cf,tol,self.max_iter,self.gamma,balanced,self.criteria,seed=self.seed)
 
                     gres,sample_weightL, sample_weightR = ds.fit(x, Y, sample_weight,self.class_map,self.class_map_inv,sam_counts,instability)
                     #print ("R:",gres,sample_weightL.shape[0], sample_weightR.shape[0])
@@ -109,17 +109,17 @@ class BaseCO2Tree:
                         if nnzL > self.min_samples_leaf:      
                             #left
                             if not (sam_counts is None): 
-                                structure[id_][0] = self.buildTree(tol, C*self.intercept_scaling, x, Y, structure, sample_weightL, features_weight, deth + 1,balanced,deepcopy(ds.counts),ds.instability)
+                                structure[id_][0] = self.buildTree(tol, C, x, Y, structure, sample_weightL, features_weight, deth + 1,balanced,deepcopy(ds.counts),ds.instability)
                             else:
-                                structure[id_][0] = self.buildTree(tol, C*self.intercept_scaling, x, Y, structure, sample_weightL, features_weight, deth + 1,balanced,sam_counts,ds.instability)    
+                                structure[id_][0] = self.buildTree(tol, C, x, Y, structure, sample_weightL, features_weight, deth + 1,balanced,sam_counts,ds.instability)    
                         else:
                             self.processed_counter += nnzL                                
                             #right
                         if nnzR > self.min_samples_leaf:    
                             if not (sam_counts is None):    
-                                structure[id_][1] = self.buildTree(tol, C*self.intercept_scaling, x, Y, structure, sample_weightR, features_weight, deth + 1,balanced,deepcopy(ds.counts),ds.instability)
+                                structure[id_][1] = self.buildTree(tol, C, x, Y, structure, sample_weightR, features_weight, deth + 1,balanced,deepcopy(ds.counts),ds.instability)
                             else:
-                                structure[id_][1] = self.buildTree(tol, C*self.intercept_scaling, x, Y, structure, sample_weightR, features_weight, deth + 1,balanced,sam_counts,ds.instability)                                    
+                                structure[id_][1] = self.buildTree(tol, C, x, Y, structure, sample_weightR, features_weight, deth + 1,balanced,sam_counts,ds.instability)                                    
                         else:
                             self.processed_counter += nnzR
                         return id_
@@ -174,10 +174,7 @@ class BaseCO2Tree:
                 
                 self.structure = []
                 
-                if self.cov_dr > 0:
-                    sam_counts = [] #zeros((x.shape[0]),dtype=int8)
-                else:
-                    sam_counts = None
+                sam_counts = None
                         
                 self.total_len = self.buildTree(self.tol, self.C,x, Y, self.structure, sample_weight, features_weight, 1,True,sam_counts)
                 
@@ -340,7 +337,7 @@ class BaseCO2Tree:
             
                 
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
-                 min_samples_split = 2, min_samples_leaf = 1, seed = None, \
+                 min_samples_split = 2, min_samples_leaf = 1, seed = 0, \
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10.,criteria='gini', spatial_mul=1.0):
         self.criteria = criteria 
         self.leaves = []
@@ -365,22 +362,24 @@ class BaseCO2Tree:
         
 class CO2TreeClassifier(BaseCO2Tree, ClassifierMixin):
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
-                 min_samples_split = 2, min_samples_leaf = 1, seed = None, \
+                 min_samples_split = 2, min_samples_leaf = 1, seed = 0, \
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10.,\
                  criteria='gini', spatial_mul=1.0):
         super().__init__(C, tol, max_iter,kernel, dual,max_depth, \
                  min_samples_split, min_samples_leaf, seed, \
                  sample_ratio,feature_ratio,gamma, \
                  criteria, spatial_mul)
+        self.decisionStampClass = dst.DecisionStampClassifier
 
 class CO2TreeRegressor(BaseCO2Tree, RegressorMixin):
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
-                 min_samples_split = 2, min_samples_leaf = 1, seed = None, \
+                 min_samples_split = 2, min_samples_leaf = 1, seed = 0, \
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10., \
                 criteria='mse', spatial_mul=1.0):
         super().__init__(C, tol, max_iter,kernel, dual,max_depth, \
                  min_samples_split, min_samples_leaf, seed, \
                  sample_ratio,feature_ratio,gamma, \
                  criteria, spatial_mul)
+        self.decisionStampClass = dst.DecisionStampRegressor
 
 

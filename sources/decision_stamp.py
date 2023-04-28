@@ -129,8 +129,6 @@ class BaseDecisionStamp:
                         
             except Exception as exp:
                 print (str(exp))
-                #print (x_tmp.shape)
-                print(H)
                 print(traceback.format_exc())
                 return 0.            
 
@@ -259,17 +257,17 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
                  sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed)
         
     def fit(self, x,Y, sample_weight,class_map,class_map_inv,counts, instability = 0):
-        super().fit(x,Y, sample_weight,class_map,class_map_inv,counts, instability)         
+        return super().fit(x,Y, sample_weight,class_map,class_map_inv,counts, instability)         
     
     
     def stamp_sign(self,x,train_data, sample = True):
-        super().stamp_sign(x,train_data, sample)     
+        return super().stamp_sign(x,train_data, sample)     
 
     def predict_stat(self,x,sample = True):
-        super().predict_stat(x,sample)
+        return super().predict_stat(x,sample)
 
     def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-        super().predict_proba(x,Y,train_data,sample, use_weight, get_id)        
+        return super().predict_proba(x,Y,train_data,sample, use_weight, get_id)        
         
     def delta(self,H,Y):
         res = 0
@@ -566,13 +564,13 @@ class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
                  sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed)
         
     def stamp_sign(self,x,train_data, sample = True):
-        super().stamp_sign(x,train_data, sample)     
+        return super().stamp_sign(x,train_data, sample)     
 
     def predict_stat(self,x,sample = True):
-        super().predict_stat(x,sample)
+        return super().predict_stat(x,sample)
 
     def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-        super().predict_proba(x,Y,train_data,sample, use_weight, get_id)           
+        return super().predict_proba(x,Y,train_data,sample, use_weight, get_id)           
     
     def calcCriterion(self,x,Y, train_data,report = False):  
         H = self.stamp_sign(x, train_data, sample = False)

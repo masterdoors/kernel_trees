@@ -38,6 +38,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 
 def fitter(uuids,forest,shapex,seed_):
+    assert forest.treeClass is not None
     dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
     indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
     ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
@@ -46,8 +47,8 @@ def fitter(uuids,forest,shapex,seed_):
     
     k = forest.kernel
         
-    tree = co2.BaseCO2Tree(C=forest.C , kernel=k,\
-    tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
+    tree = forest.treeClass(C=forest.C , kernel=k,\
+    tol=forest.tol, max_iter=forest.max_iter,max_depth = forest.max_depth,\
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = seed_,\
      sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -132,12 +133,12 @@ class BaseCO2Forest:
         self.trees = []
         forest = self
         for i in range(self.n_estimators):
-            tree = co2.CO2Tree(C=forest.C , kernel=forest.kernel,\
+            tree = co2.BaseCO2Tree(C=forest.C , kernel=forest.kernel,\
             tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
             min_samples_leaf = forest.min_samples_leaf, seed = None,\
             sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
-            gamma=forest.gamma,intercept_scaling=forest.intercept_scaling,dropout_low=forest.dropout_low,dropout_high=forest.dropout_high,noise=forest.noise,cov_dr=forest.cov_dr, criteria = forest.criteria)
+            gamma=forest.gamma,criteria = forest.criteria)
 
             tree.fit(x,Y, preprocess = False)
             self.trees.append(tree)
@@ -219,7 +220,7 @@ class BaseCO2Forest:
         
         x = csr_matrix(x)
         
-        self.x = x
+        self.train_data = x
         
         self.le = LabelEncoder().fit(Y)
         Y = self.le.transform(Y)
@@ -417,6 +418,7 @@ class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
                  gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio)
+        self.treeClass = co2.CO2TreeClassifier 
 
 class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
@@ -426,4 +428,5 @@ class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
                  gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio)
+        self.treeClass = co2.CO2TreeRegressor
 
