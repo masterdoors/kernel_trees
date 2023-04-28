@@ -28,13 +28,11 @@ thirdparty - files to patch Scikit-learn (deprecated).
 
 # Installation:
 ## Kernel Forests
-1. Install dependences
-2. Copy sources/CO2_**.py into the working dir of your program.
+pip install git+https://github.com/masterdoors/kernel_trees.git
 ## Kernel Forests with GPU acceleration
 1. Install the fork of ThunderSVM (It supports sample_weights): https://github.com/masterdoors/thundersvm
-2. Install dependences
-3. Copy sources/GPU/*.py into the working dir of your program.
+2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
 ## Cascade Forests
 1. Install dependences
 2. Go to sources/cascade. Run setup.py install
-3. Copy sources/CO2_**.py into the working dir of your program.
+3. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
