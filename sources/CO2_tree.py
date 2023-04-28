@@ -83,7 +83,8 @@ class BaseCO2Tree:
                     
                     ds = self.decisionStampClass(self.n_classes,self.class_max, features_weight,\
                                            self.kernel, sample_ratio,self.feature_ratio,\
-                                           self.dual,C/cf,tol,self.max_iter,self.gamma,balanced,self.criteria,seed=self.seed)
+                                           self.dual,C/cf,tol,self.max_iter,self.gamma,balanced,\
+                                           self.criteria,seed=self.seed, verbose = self.verbose )
 
                     gres,sample_weightL, sample_weightR = ds.fit(x, Y, sample_weight,self.class_map,self.class_map_inv,sam_counts,instability)
                     #print ("R:",gres,sample_weightL.shape[0], sample_weightR.shape[0])
@@ -338,7 +339,7 @@ class BaseCO2Tree:
                 
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
                  min_samples_split = 2, min_samples_leaf = 1, seed = 0, \
-                 sample_ratio=1.0,feature_ratio=1.0,gamma=10.,criteria='gini', spatial_mul=1.0):
+                 sample_ratio=1.0,feature_ratio=1.0,gamma=10.,criteria='gini', spatial_mul=1.0, verbose = 0):
         self.criteria = criteria 
         self.leaves = []
         self.max_depth = max_depth
@@ -358,28 +359,29 @@ class BaseCO2Tree:
         self.leaves_number = 0
         self.spatial_mul = spatial_mul
         self.seed = seed
+        self.verbose = verbose
 
         
 class CO2TreeClassifier(BaseCO2Tree, ClassifierMixin):
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
                  min_samples_split = 2, min_samples_leaf = 1, seed = 0, \
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10.,\
-                 criteria='gini', spatial_mul=1.0):
+                 criteria='gini', spatial_mul=1.0,verbose = 0):
         super().__init__(C, tol, max_iter,kernel, dual,max_depth, \
                  min_samples_split, min_samples_leaf, seed, \
                  sample_ratio,feature_ratio,gamma, \
-                 criteria, spatial_mul)
+                 criteria, spatial_mul,verbose)
         self.decisionStampClass = dst.DecisionStampClassifier
 
 class CO2TreeRegressor(BaseCO2Tree, RegressorMixin):
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \
                  min_samples_split = 2, min_samples_leaf = 1, seed = 0, \
                  sample_ratio=1.0,feature_ratio=1.0,gamma=10., \
-                criteria='mse', spatial_mul=1.0):
+                criteria='mse', spatial_mul=1.0,verbose = 0):
         super().__init__(C, tol, max_iter,kernel, dual,max_depth, \
                  min_samples_split, min_samples_leaf, seed, \
                  sample_ratio,feature_ratio,gamma, \
-                 criteria, spatial_mul)
+                 criteria, spatial_mul,verbose)
         self.decisionStampClass = dst.DecisionStampRegressor
 
 

@@ -82,7 +82,7 @@ for C in [5500]:
                     print ("Test carbon rbf forest with tree deth= ", d+1, " C= ", C, " s ratio ", r," f ratio ",f)#,"l:",l)
 
                     print  (datetime.datetime.now())
-                    trc = co2f.CO2ForestClassifier(C=C, dual=True,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+                    trc = co2f.CO2ForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='linear',\
                                                    max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,n_estimators=10,\
                                                    gamma=1,criteria='gain')
                     
@@ -96,6 +96,6 @@ for C in [5500]:
                     sum_v_acc += calcAcc(Y_validate,Y_v)
                     print (datetime.datetime.now())
 
-                    print ("Train accuracy: ", sum_t_acc / tries)
-                    print ("Validate accuracy:", sum_v_acc / tries)
+                print ("Train accuracy: ", sum_t_acc / tries)
+                print ("Validate accuracy:", sum_v_acc / tries)
 

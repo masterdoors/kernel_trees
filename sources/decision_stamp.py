@@ -139,7 +139,7 @@ class BaseDecisionStamp:
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
                  max_iter=1000,gamma=1000.,\
-                 balance=True,criteria="gini",seed=None):
+                 balance=True,criteria="gini",seed=None, verbose=0):
         if criteria == "gain":
             self.criteria_str = 'entropy'
             self.criteria = criteriaIG
@@ -153,7 +153,7 @@ class BaseDecisionStamp:
         else:
             self.criteria = criteriaMSE           
             
-        
+        self.verbose = verbose
         self.tol = tol
         self.n_classes = n_classes
         self.class_max = class_max
@@ -252,22 +252,9 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
                  max_iter=1000,gamma=1000.,\
-                 balance=True,criteria="gini",seed=None):
+                 balance=True,criteria="gini",seed=None, verbose=0):
         super().__init__(n_classes,class_max, features_weight, kernel, \
-                 sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed)
-        
-    def fit(self, x,Y, sample_weight,class_map,class_map_inv,counts, instability = 0):
-        return super().fit(x,Y, sample_weight,class_map,class_map_inv,counts, instability)         
-    
-    
-    def stamp_sign(self,x,train_data, sample = True):
-        return super().stamp_sign(x,train_data, sample)     
-
-    def predict_stat(self,x,sample = True):
-        return super().predict_stat(x,sample)
-
-    def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-        return super().predict_proba(x,Y,train_data,sample, use_weight, get_id)        
+                 sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed, verbose)
         
     def delta(self,H,Y):
         res = 0
@@ -559,18 +546,18 @@ class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
                  max_iter=1000,gamma=1000.,\
-                 balance=True,criteria="mse",seed=None):
+                 balance=True,criteria="mse",seed=None, verbose=0):
         super().__init__(n_classes,class_max, features_weight, kernel, \
-                 sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed)
+                 sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed,verbose)
         
-    def stamp_sign(self,x,train_data, sample = True):
-        return super().stamp_sign(x,train_data, sample)     
-
-    def predict_stat(self,x,sample = True):
-        return super().predict_stat(x,sample)
-
-    def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-        return super().predict_proba(x,Y,train_data,sample, use_weight, get_id)           
+#     def stamp_sign(self,x,train_data, sample = True):
+#         return super().stamp_sign(x,train_data, sample)     
+# 
+#     def predict_stat(self,x,sample = True):
+#         return super().predict_stat(x,sample)
+# 
+#     def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
+#         return super().predict_proba(x,Y,train_data,sample, use_weight, get_id)           
     
     def calcCriterion(self,x,Y, train_data,report = False):  
         H = self.stamp_sign(x, train_data, sample = False)

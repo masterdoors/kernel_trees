@@ -52,7 +52,7 @@ def fitter(uuids,forest,shapex,seed_):
      min_samples_split = forest.min_samples_split,dual=forest.dual,\
     min_samples_leaf = forest.min_samples_leaf, seed = seed_,\
      sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
-     gamma=forest.gamma, criteria = forest.criteria,spatial_mul=forest.spatial_mul)
+     gamma=forest.gamma, criteria = forest.criteria,spatial_mul=forest.spatial_mul, verbose = forest.verbose)
     tree.fit(x,Y, preprocess = False)
     return tree
 
@@ -386,7 +386,7 @@ class BaseCO2Forest:
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0):
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0,verbose=0):
         self.criteria = criteria
         self.C = C
         self.min_samples_split = min_samples_split
@@ -408,25 +408,25 @@ class BaseCO2Forest:
         self.reinforced = reinforced
         self.id_ = id_
         self.univariate_ratio = univariate_ratio
-
+        self.verbose = verbose
 
 class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0):
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0,verbose=0):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
-                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio)
+                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio,verbose)
         self.treeClass = co2.CO2TreeClassifier 
 
 class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='mse',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0):
+                 gamma=1000.,criteria='mse',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0, verbose=0):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
-                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio)
+                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio, verbose)
         self.treeClass = co2.CO2TreeRegressor
 
