@@ -19,24 +19,19 @@ import numpy
 
 import CO2_tree as co2t
 import CO2_forest as co2f
+from sklearn.metrics import accuracy_score
 
 from sklearn.model_selection import train_test_split
 
+import optuna
 
-def calcAcc(Y1,Y2):
-    sum_ = 0
-    for i in range(len(Y1)):
-        if Y1[i] == Y2[i]:
-            sum_ += 1
 
-    return float(sum_) / len(Y1)
 
 digits = datasets.load_digits()
 
 
-sratio = [0.01,0.02,0.04,0.08,0.16,0.32]
 fratio = [0.05, 0.08,0.1,0.2,0.3]
-tree_deth = [4]
+tree_deth = [4,5,6,]
 
 tries = 3
 
@@ -65,37 +60,24 @@ x_train, x_validate, Y_train, Y_validate = train_test_split(
 x_sp_t = csr_matrix(x_train,dtype=numpy.float32)#[:6000]
 x_sp_v = csr_matrix(x_validate,dtype=numpy.float32)#[:3000]
 
-for C in [5500]:
-
-    for d in tree_deth:
-
-        sum_t_acc = 0.
-        sum_v_acc = 0.
-
-        for r in sratio:
-            for f in fratio: 
-                #for l in [2]:
-                sum_t_acc = 0.
-                sum_v_acc = 0.
-                for _ in range(tries):
-
-                    print ("Test carbon rbf forest with tree deth= ", d+1, " C= ", C, " s ratio ", r," f ratio ",f)#,"l:",l)
-
-                    print  (datetime.datetime.now())
-                    trc = co2f.CO2ForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='linear',\
-                                                   max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,n_estimators=10,\
-                                                   gamma=1,criteria='gain')
+def objective(trial):
+    C = trial.suggest_float('C', 1000, 5500)
+    d = trial.suggest_float('d', 4, 7)
+    f = trial.suggest_float('f', 0.05, 0.5)
+    
+    trc = co2f.CO2ForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+                                   max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
+                                   n_estimators=30,\
+                                   gamma=1,criteria='gain')
+    
+    trc.fit(x_sp_t, Y_train)
+    Y_v = trc.predict(x_sp_v)
                     
-                    trc.fit(x_sp_t, Y_train)
+    return accuracy_score(Y_validate,Y_v)
 
-                    Y_t = trc.predict(x_sp_t)
+study = optuna.create_study(direction='maximize')
+study.optimize(objective, n_trials=100)
 
-                    Y_v = trc.predict(x_sp_v)
-
-                    sum_t_acc += calcAcc(Y_train,Y_t)
-                    sum_v_acc += calcAcc(Y_validate,Y_v)
-                    print (datetime.datetime.now())
-
-                print ("Train accuracy: ", sum_t_acc / tries)
-                print ("Validate accuracy:", sum_v_acc / tries)
+#bp = study.best_params  # E.g. {'x': 2.002108042}
+print(study.best_trial)
 
