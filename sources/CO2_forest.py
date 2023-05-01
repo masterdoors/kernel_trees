@@ -217,7 +217,28 @@ class BaseCO2Forest:
 
     #@profile
     def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
-        
+        """
+        Build a forest of trees from the training set (X, y).
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The training input samples. Internally, its dtype will be converted
+            to ``dtype=np.float32``. If a sparse matrix is provided, it will be
+            converted into a sparse ``csc_matrix``.
+        y : array-like of shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels in classification, real numbers in
+            regression).
+        sample_weight : array-like of shape (n_samples,), default=None
+            Sample weights. If None, then samples are equally weighted. Splits
+            that would create child nodes with net zero or negative weight are
+            ignored while searching for a split in each node. In the case of
+            classification, splits are also ignored if they would result in any
+            single class carrying a negative weight in either child node.
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """        
         x = csr_matrix(x)
         
         self.train_data = x
@@ -267,6 +288,23 @@ class BaseCO2Forest:
         proba =  asarray(probas)#[:,1:]
         return proba      
 
+        """
+        Predict class for X.
+        The predicted class of an input sample is a vote by the trees in
+        the forest, weighted by their probability estimates. That is,
+        the predicted class is the one with highest mean probability
+        estimate across the trees.
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to
+            ``dtype=np.float32``. If a sparse matrix is provided, it will be
+            converted into a sparse ``csr_matrix``.
+        Returns
+        -------
+        y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
+            The predicted classes.
+        """
     def predict(self,x,Y=None,use_weight=True):
         if Y is not None:
             proba, cmp = self.predict_proba(x,Y,use_weight=use_weight)
@@ -411,6 +449,85 @@ class BaseCO2Forest:
         self.verbose = verbose
 
 class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
+    """
+    A random kerneel  forest classifier.
+    A random forest is a meta estimator that fits a number of kernel tree
+    classifiers on various sub-samples of the dataset and uses averaging to
+    improve the predictive accuracy and control over-fitting.
+    The sub-sample size is controlled with the `max_samples` parameter if
+    `bootstrap=True` (default), otherwise the whole dataset is used to build
+    each tree.
+
+    Parameters
+    ----------
+    n_estimators : int, default=10    
+    criterion : {"gini", "gain"}, default="gini"
+        The function to measure the quality of a split. Supported criteria are
+        "gini" for the Gini impurity and "gain" both for the
+        Shannon information gain, see :ref:`tree_mathematical_formulation`.
+        Note: This parameter is tree-specific.
+    max_depth : int, default=None
+        The maximum depth of the tree. If None, then nodes are expanded until
+        all leaves are pure or until all leaves contain less than
+        min_samples_split samples.
+    min_samples_split : int or float, default=2
+        The minimum number of samples required to split an internal node:
+        - consider `min_samples_split` as the minimum number.
+    max_features : float
+        The number of features to consider when looking for the best split:
+        - If float, then `max_features` is a fraction and
+          `max(1, int(max_features * n_features_in_))` features are considered at each
+          split.
+    max_leaf_nodes : int, default=None
+        Grow trees with ``max_leaf_nodes`` in best-first fashion.
+        Best nodes are defined as relative reduction in impurity.
+        If None then unlimited number of leaf nodes.
+    n_jobs : int, default=None
+        The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`,
+        :meth:`decision_path` and :meth:`apply` are all parallelized over the
+        trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend`
+        context. ``-1`` means using all processors. See :term:`Glossary
+        <n_jobs>` for more details.
+    random_state : int, RandomState instance or None, default=None
+        Controls both the randomness of the bootstrapping of the samples used
+        when building trees (if ``bootstrap=True``) and the sampling of the
+        features to consider when looking for the best split at each node
+        (if ``max_features < n_features``).
+        See :term:`Glossary <random_state>` for details.
+    verbose : int, default=0
+        Controls the verbosity when fitting and predicting.
+    class_weight : {"balanced", "balanced_subsample"}, dict or list of dicts, \
+            default=None
+        Weights associated with classes in the form ``{class_label: weight}``.
+        If not given, all classes are supposed to have weight one. For
+        multi-output problems, a list of dicts can be provided in the same
+        order as the columns of y.
+        Note that for multioutput (including multilabel) weights should be
+        defined for each class of every column in its own dict. For example,
+        for four-class multilabel classification weights should be
+        [{0: 1, 1: 1}, {0: 1, 1: 5}, {0: 1, 1: 1}, {0: 1, 1: 1}] instead of
+        [{1:1}, {2:5}, {3:1}, {4:1}].
+        The "balanced" mode uses the values of y to automatically adjust
+        weights inversely proportional to class frequencies in the input data
+        as ``n_samples / (n_classes * np.bincount(y))``
+        The "balanced_subsample" mode is the same as "balanced" except that
+        weights are computed based on the bootstrap sample for every tree
+        grown.
+        For multi-output, the weights of each column of y will be multiplied.
+        Note that these weights will be multiplied with sample_weight (passed
+        through the fit method) if sample_weight is specified.
+
+    max_samples : int or float, default=None
+        the number of samples to draw from X
+        to train each base estimator.
+        draw `max_samples * X.shape[0]` samples. Thus,
+          `max_samples` should be in the interval `(0.0, 1.0]`.
+
+
+
+
+
+    """    
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
