@@ -64,7 +64,7 @@ def objective(trial):
     C = trial.suggest_float('C', 1000, 5500)
     d = trial.suggest_int('d', 4, 7)
     f = trial.suggest_float('f', 0.05, 0.5)
-    g = trial.suggest_float('g', 0.005, 10)
+    g = trial.suggest_float('g', 0.005, 1)
     
     trc = co2f.CO2ForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                                    max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\

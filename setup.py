@@ -26,5 +26,5 @@ setup(
     include_package_data=True,
     zip_safe=False,
     package_dir={'': 'sources'},
-    install_requires=['numpy==1.22.2','scipy','sympy','joblib','scikit-learn @ git+https://github.com/masterdoors/scikit-learn#egg=scikit-learn=0.24.2']
+    install_requires=['numpy==1.19.5','scipy','sympy','joblib','scikit-learn @ git+https://github.com/masterdoors/scikit-learn#egg=scikit-learn=0.24.2']
 )
