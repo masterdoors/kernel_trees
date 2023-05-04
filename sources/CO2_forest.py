@@ -37,13 +37,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 
-def fitter(uuids,forest,shapex,seed_):
+def fitter(x,Y,forest,seed_):
     assert forest.treeClass is not None
-    dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
-    indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
-    ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32,copy=False)
-    Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
+    #dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
+    #indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
+    #ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
+    #x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32,copy=False)
+    #Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
     
     k = forest.kernel
         
@@ -56,35 +56,10 @@ def fitter(uuids,forest,shapex,seed_):
     tree.fit(x,Y, preprocess = False)
     return tree
 
-def probber(uuids, shapex,train_shape,tree,stat_only,use_weight = True,withY = False):
-        dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
-        indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
-        ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-        
-        if withY:
-            Y = load('/dev/shm/' + uuids + "DataY.npy",mmap_mode='r')
-        else:
-            Y = None            
-        x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)    
-        
-        dataX = load('/dev/shm/' + uuids + 'trainDataX.npy',mmap_mode='r')
-        indX = load('/dev/shm/' + uuids + "trainIndX.npy",mmap_mode='r')
-        ptrX = load('/dev/shm/' + uuids + "trainPtrX.npy",mmap_mode='r')    
-        train_data = csr_matrix((dataX,indX,ptrX), shape=train_shape,dtype=numpy.float32,copy=False)
-    
-        return tree.predict_proba(x,Y,train_data, preprocess = False,stat_only=stat_only,use_weight=use_weight)    
+def probber(x,train_data,tree,stat_only,use_weight = True,withY = False):
+    return tree.predict_proba(x,None,train_data, preprocess = False,stat_only=stat_only,use_weight=use_weight)    
 
-def indicator(uuids, shapex,train_shape,tree,noise,balance_noise):
-    dataX = load('/dev/shm/' + uuids + 'DataX.npy',mmap_mode='r')
-    indX = load('/dev/shm/' + uuids + "IndX.npy",mmap_mode='r')
-    ptrX = load('/dev/shm/' + uuids + "PtrX.npy",mmap_mode='r')
-    
-    x = csr_matrix((dataX,indX,ptrX), shape=shapex,dtype=numpy.float32, copy=False)        
-    dataX = load('/dev/shm/' + uuids + 'trainDataX.npy',mmap_mode='r')
-    indX = load('/dev/shm/' + uuids + "trainIndX.npy",mmap_mode='r')
-    ptrX = load('/dev/shm/' + uuids + "trainPtrX.npy",mmap_mode='r')    
-    train_data = csr_matrix((dataX,indX,ptrX), shape=train_shape,dtype=numpy.float32,copy=False)    
-
+def indicator(x,train_data,tree,noise,balance_noise):
     return tree.getIndicators(x, train_data, noise = noise, balance_noise = balance_noise)     
 
 def statter(tree):
@@ -127,7 +102,7 @@ class BaseCO2Forest:
         return that
     
     def stat(self):
-        return Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(statter)(t) for t in self.trees)
+        return Parallel(n_jobs=self.n_jobs,backend="threading")(delayed(statter)(t) for t in self.trees)
     
     def sequential_fit(self,x,Y):
         self.trees = []
@@ -249,19 +224,20 @@ class BaseCO2Forest:
             Y_test = self.le.transform(Y_test)
      
         if not model:
-            uuids = str(uuid.uuid4())
+            #uuids = str(uuid.uuid4())
 
-            save('/dev/shm/'+ uuids + "DataX",x.data)
-            save('/dev/shm/'+ uuids + "IndX",x.indices)
-            save('/dev/shm/'+ uuids + "PtrX",x.indptr)
-            save('/dev/shm/'+ uuids + "DataY",Y) 
+            #save('/dev/shm/'+ uuids + "DataX",x.data)
+            #save('/dev/shm/'+ uuids + "IndX",x.indices)
+            #save('/dev/shm/'+ uuids + "PtrX",x.indptr)
+            #save('/dev/shm/'+ uuids + "DataY",Y) 
 
-            self.trees = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(fitter)(uuids,self,x.shape,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))
+            #self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(uuids,self,x.shape,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))
+            self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(x,Y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
 
-            os.remove('/dev/shm/'+ uuids + "DataX.npy")
-            os.remove('/dev/shm/'+ uuids + "IndX.npy")
-            os.remove('/dev/shm/'+ uuids + "PtrX.npy")
-            os.remove('/dev/shm/'+ uuids + "DataY.npy")   
+            #os.remove('/dev/shm/'+ uuids + "DataX.npy")
+            #os.remove('/dev/shm/'+ uuids + "IndX.npy")
+            #os.remove('/dev/shm/'+ uuids + "PtrX.npy")
+            #os.remove('/dev/shm/'+ uuids + "DataY.npy")   
         else:
             with open('forest.pickle', 'rb') as f:
                 self.trees = pickle.load(f).trees     
@@ -276,8 +252,8 @@ class BaseCO2Forest:
 
         proba =  (asarray(probas).sum(axis=0), 1. / self.n_estimators)
         res =  argmax(proba, axis = 1)
-        zr = res == 0
-        res[zr] = 1
+        #zr = res == 0
+        #res[zr] = 1
         return self.le.inverse_transform(res)   
     
     def sequential_predict_proba(self,x,use_weight=True):
@@ -288,6 +264,7 @@ class BaseCO2Forest:
         proba =  asarray(probas)#[:,1:]
         return proba      
 
+    def predict(self,x,Y=None,use_weight=True):
         """
         Predict class for X.
         The predicted class of an input sample is a vote by the trees in
@@ -304,17 +281,17 @@ class BaseCO2Forest:
         -------
         y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
             The predicted classes.
-        """
-    def predict(self,x,Y=None,use_weight=True):
+        """        
         if Y is not None:
             proba, cmp = self.predict_proba(x,Y,use_weight=use_weight)
         else:
-            proba = self.predict_proba(x,Y,use_weight=use_weight)    
+            proba = self.predict_proba(x,Y,use_weight=use_weight)   
+            
         res =  argmax(proba, axis = 1)
-        zr = res == 0
+        #zr = res == 0
 
         #print ("Unknown errors: ", zr.astype(int).sum())
-        res[zr] = 1
+        #res[zr] = 1
         
         res = self.le.inverse_transform(res)
         if Y is not None:
@@ -333,7 +310,7 @@ class BaseCO2Forest:
         save('/dev/shm/'+ uuids + "trainPtrX",self.train_data.indptr)            
         
 
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing")(delayed(indicator)(uuids,x.shape,self.train_data.shape,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing",require="sharedmem")(delayed(indicator)(x,self.train_data,t,noise,balance_noise) for t in self.trees)
 
         os.remove('/dev/shm/'+ uuids + "DataX.npy")
         os.remove('/dev/shm/'+ uuids + "IndX.npy")
@@ -380,25 +357,25 @@ class BaseCO2Forest:
         else:    
             uuids = str(uuid.uuid4())
 
-            save('/dev/shm/'+ uuids + "DataX",x.data)
-            save('/dev/shm/'+ uuids + "IndX",x.indices)
-            save('/dev/shm/'+ uuids + "PtrX",x.indptr)     
+            #save('/dev/shm/'+ uuids + "DataX",x.data)
+            #save('/dev/shm/'+ uuids + "IndX",x.indices)
+            #save('/dev/shm/'+ uuids + "PtrX",x.indptr)     
             
-            save('/dev/shm/'+ uuids + "trainDataX",self.train_data.data)
-            save('/dev/shm/'+ uuids + "trainIndX",self.train_data.indices)
-            save('/dev/shm/'+ uuids + "trainPtrX",self.train_data.indptr)                 
+            #save('/dev/shm/'+ uuids + "trainDataX",self.train_data.data)
+            #save('/dev/shm/'+ uuids + "trainIndX",self.train_data.indices)
+            #save('/dev/shm/'+ uuids + "trainPtrX",self.train_data.indptr)                 
 
             if Y is not None:
                 Y = self.le.transform(Y)
                 save('/dev/shm/'+ uuids + "DataY",Y) 
-            res = Parallel(n_jobs=self.n_jobs,backend="loky")(delayed(probber)(uuids,x.shape,self.train_data.shape,t,False,use_weight,Y is not None) for t in self.trees)
+            res = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(probber)(x,self.train_data,t,False,use_weight,Y is not None) for t in self.trees)
 
-            os.remove('/dev/shm/'+ uuids + "DataX.npy")
-            os.remove('/dev/shm/'+ uuids + "IndX.npy")
-            os.remove('/dev/shm/'+ uuids + "PtrX.npy")
-            os.remove('/dev/shm/'+ uuids + "trainDataX.npy")
-            os.remove('/dev/shm/'+ uuids + "trainIndX.npy")
-            os.remove('/dev/shm/'+ uuids + "trainPtrX.npy")
+            #os.remove('/dev/shm/'+ uuids + "DataX.npy")
+            #os.remove('/dev/shm/'+ uuids + "IndX.npy")
+            #os.remove('/dev/shm/'+ uuids + "PtrX.npy")
+            #os.remove('/dev/shm/'+ uuids + "trainDataX.npy")
+            #os.remove('/dev/shm/'+ uuids + "trainIndX.npy")
+            #os.remove('/dev/shm/'+ uuids + "trainPtrX.npy")
 
             rr = []
             rs = []               
@@ -450,7 +427,7 @@ class BaseCO2Forest:
 
 class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
     """
-    A random kerneel  forest classifier.
+    A random kernel  forest classifier.
     A random forest is a meta estimator that fits a number of kernel tree
     classifiers on various sub-samples of the dataset and uses averaging to
     improve the predictive accuracy and control over-fitting.
@@ -522,11 +499,6 @@ class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
         to train each base estimator.
         draw `max_samples * X.shape[0]` samples. Thus,
           `max_samples` should be in the interval `(0.0, 1.0]`.
-
-
-
-
-
     """    
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
@@ -538,6 +510,58 @@ class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
         self.treeClass = co2.CO2TreeClassifier 
 
 class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
+    """
+    A random kernel  forest regressor.
+    A random forest is a meta estimator that fits a number of kernel tree
+    classifiers on various sub-samples of the dataset and uses averaging to
+    improve the predictive accuracy and control over-fitting.
+    The sub-sample size is controlled with the `max_samples` parameter if
+    `bootstrap=True` (default), otherwise the whole dataset is used to build
+    each tree.
+
+    Parameters
+    ----------
+    n_estimators : int, default=10    
+    criterion : {"mse"}, default="mse"
+        The function to measure the quality of a split. 
+    max_depth : int, default=None
+        The maximum depth of the tree. If None, then nodes are expanded until
+        all leaves are pure or until all leaves contain less than
+        min_samples_split samples.
+    min_samples_split : int or float, default=2
+        The minimum number of samples required to split an internal node:
+        - consider `min_samples_split` as the minimum number.
+    max_features : float
+        The number of features to consider when looking for the best split:
+        - If float, then `max_features` is a fraction and
+          `max(1, int(max_features * n_features_in_))` features are considered at each
+          split.
+    max_leaf_nodes : int, default=None
+        Grow trees with ``max_leaf_nodes`` in best-first fashion.
+        Best nodes are defined as relative reduction in impurity.
+        If None then unlimited number of leaf nodes.
+    n_jobs : int, default=None
+        The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`,
+        :meth:`decision_path` and :meth:`apply` are all parallelized over the
+        trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend`
+        context. ``-1`` means using all processors. See :term:`Glossary
+        <n_jobs>` for more details.
+    random_state : int, RandomState instance or None, default=None
+        Controls both the randomness of the bootstrapping of the samples used
+        when building trees (if ``bootstrap=True``) and the sampling of the
+        features to consider when looking for the best split at each node
+        (if ``max_features < n_features``).
+        See :term:`Glossary <random_state>` for details.
+    verbose : int, default=0
+        Controls the verbosity when fitting and predicting.
+
+    max_samples : int or float, default=None
+        the number of samples to draw from X
+        to train each base estimator.
+        draw `max_samples * X.shape[0]` samples. Thus,
+          `max_samples` should be in the interval `(0.0, 1.0]`.
+    """    
+        
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\

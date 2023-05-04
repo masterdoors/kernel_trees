@@ -31,6 +31,7 @@ from sklearn.base import RegressorMixin
 import numpy
 
 import sys
+from sklearn.preprocessing import LabelEncoder
 
 
 def expandMatrix(x):
@@ -75,10 +76,10 @@ class BaseCO2Tree:
                     #balanced = True
                     cf = 1
 
-                    if deth < 3:
-                        sample_ratio = 0.2 * self.sample_ratio
-                    else:
-                        sample_ratio = self.sample_ratio
+                    #if deth < 3:
+                    #    sample_ratio = 0.2 * self.sample_ratio
+                    #else:
+                    sample_ratio = self.sample_ratio
 
                     
                     ds = self.decisionStampClass(self.n_classes,self.class_max, features_weight,\
@@ -143,14 +144,16 @@ class BaseCO2Tree:
                 
                 if preprocess:
                     x = expandMatrix(x)
+                    self.le = LabelEncoder().fit(Y)
+                    Y = self.le.transform(Y)
                 
                 self.n_features = x.shape[1]
                 classes_ = nonzero(bincount(Y))[0]
                 self.n_classes = len(classes_)
                 self.class_max = Y.max()
                 
-                self.class_map = zeros(shape = (self.class_max + 1), dtype = int64)
-                self.class_map_inv = zeros(shape = (self.n_classes), dtype = int64)
+                self.class_map = {}#zeros(shape = (self.class_max + 1), dtype = int64)
+                self.class_map_inv ={} #zeros(shape = (self.n_classes), dtype = int64)
                 cc = 0
                 for c in classes_:
                     self.class_map[c] = cc
@@ -203,12 +206,12 @@ class BaseCO2Tree:
     def predict(self,x, train_data, preprocess = False):
         probs = self.predict_proba(x, train_data = train_data, preprocess = preprocess)
         
-        return argmax(probs,axis=1)
+        return self.le.inverse_transform(argmax(probs,axis=1))
    
     
     def predict_proba(self,x, Y = None,train_data = None, preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
         if isinstance(x,csr_matrix):
-            res = zeros((x.shape[0], self.class_max + 1))
+            res = zeros((x.shape[0], self.n_classes))
             leaf_ids = zeros((x.shape[0],))
             
             if self.total_len > -1:

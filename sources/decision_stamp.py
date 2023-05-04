@@ -213,17 +213,17 @@ class BaseDecisionStamp:
                 return np.sign(res)            
 
     def predict_stat(self,x,sample = True):
-        res = np.zeros((x.shape[0],self.class_max + 1))
+        res = np.zeros((x.shape[0],self.n_classes))
 
         sgns = self.stamp_sign(x,sample)
 
-        res[sgns < 0,1:] = self.Teta0
-        res[sgns >=0,1:] = self.Teta1
+        res[sgns < 0,:] = self.Teta0
+        res[sgns >=0,:] = self.Teta1
 
         return res
 
     def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-        res = np.zeros((x.shape[0],self.class_max + 1))
+        res = np.zeros((x.shape[0],self.n_classes))
         leaf_ids =  np.zeros((x.shape[0],))
         sgns = self.stamp_sign(x, train_data, sample)
 
@@ -326,22 +326,21 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix):
             signs = signs.todense()
 
-        cl = np.asarray(np.multiply(signs,Y + 1))
+        cl = np.asarray(np.multiply(signs,Y+1))
 
         cl = cl[np.nonzero(cl)]
-
-        pos_cl = abs(cl[cl >= 0.0]).astype(np.int64)
-        neg_cl = abs(cl[cl < 0.0]).astype(np.int64)
+        
+        pos_cl = abs(cl[cl >= 0.0]).astype(np.int64) - 1
+        neg_cl = abs(cl[cl < 0.0]).astype(np.int64) - 1
 
         lcount = np.bincount(neg_cl)
         rcount = np.bincount(pos_cl)
 
-        for i in range(1,len(lcount)):
-                self.Teta0[self.class_map[i - 1]] += float(lcount[i])
+        for i in range(0,len(lcount)):
+                self.Teta0[i] += float(lcount[i])
 
-
-        for i in range(1,len(rcount)):
-                self.Teta1[self.class_map[i - 1]] += float(rcount[i])
+        for i in range(0,len(rcount)):
+                self.Teta1[i] += float(rcount[i])
                     
     def calcCriterion(self,x,Y, train_data,report = False):
         signs = self.stamp_sign(x,train_data)
@@ -349,16 +348,16 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
         if isinstance(signs, csr_matrix) or isinstance(signs, coo_matrix): 
             signs = signs.todense()        
        
-        cl = np.asarray(np.multiply(signs,Y))
+        cl = np.asarray(np.multiply(signs,Y+1))
         
         if isnan(cl).any():
             return 0.0
 
         cl = cl[np.nonzero(cl)]
         
-        pos_cl = np.abs(cl[cl >= 0.0]).astype(np.int64)
-        neg_cl = np.abs(cl[cl < 0.0]).astype(np.int64)
-        cl = abs(cl).astype(np.int64)
+        pos_cl = np.abs(cl[cl >= 0.0]).astype(np.int64) - 1
+        neg_cl = np.abs(cl[cl < 0.0]).astype(np.int64) - 1
+        cl = abs(cl).astype(np.int64) - 1
             
         gl = 0
         gr = 0
@@ -515,8 +514,8 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
 
         self.estimateTetas(x[self.sample_weight][:, self.features_weight], Y_tmp,x) 
 
-        self.p0 = np.zeros(shape=(self.class_max + 1))
-        self.p1 = np.zeros(shape=(self.class_max + 1))
+        self.p0 = np.zeros(shape=(self.n_classes))
+        self.p1 = np.zeros(shape=(self.n_classes))
 
         sum_t0 = self.Teta0.sum()
         sum_t1 = self.Teta1.sum()
@@ -524,22 +523,17 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin):
         if sum_t0 > 0: 
             p0_ = np.multiply(self.Teta0, 1. / sum_t0)                
 
-            for i in range(len(p0_)):
-                self.p0[self.class_map_inv[i]] = p0_[i]
-
-            #exp_0 = exp(self.p0)
-            #self.p0 = exp_0 / exp_0.sum()
+            #for i in range(len(p0_)):
+            self.p0 = p0_
 
         if sum_t1 > 0:       
             p1_ = np.multiply(self.Teta1, 1. / sum_t1)
 
-            for i in range(len(p1_)):
-                self.p1[self.class_map_inv[i]] = p1_[i]  
+            #for i in range(len(p1_)):
+            self.p1 = p1_  
 
-            #exp_1 = exp(self.p1)
-            #self.p1 = exp_1 / exp_1.sum()
-        self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
-        #print ("pass 3")   
+        self.counts = []  
+ 
         return gini_res
                           
 class DecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
