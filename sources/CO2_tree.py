@@ -139,7 +139,7 @@ class BaseCO2Tree:
 #public   
     #@profile
     def fit(self,x,Y, sample_weight = None, preprocess = False):
-        if isinstance(x,csr_matrix) and isinstance(Y,ndarray):
+        if (isinstance(x,csr_matrix) or isinstance(x,numpy.ndarray)) and isinstance(Y,ndarray):
             if Y.shape[0] > 0 and x.shape[0] == Y.shape[0]:
                 
                 if preprocess:
@@ -210,7 +210,7 @@ class BaseCO2Tree:
    
     
     def predict_proba(self,x, Y = None,train_data = None, preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
-        if isinstance(x,csr_matrix):
+        if isinstance(x,csr_matrix) or isinstance(x,numpy.ndarray):
             res = zeros((x.shape[0], self.n_classes))
             leaf_ids = zeros((x.shape[0],))
             
@@ -227,7 +227,8 @@ class BaseCO2Tree:
                     new_indexes = {}
                     for index in old_indexes:
                         if index > -1:
-                            x_shr = csr_matrix(x[old_indexes[index]],dtype=numpy.float32) 
+                            #
+                            x_shr = x[old_indexes[index]] 
                             rs = self.nodes[index].stamp_sign(x_shr, train_data)
                             false_mask_left = zeros((x.shape[0],), dtype=bool)
                             false_mask_left[old_indexes[index]] = rs < 0

@@ -214,7 +214,7 @@ class BaseCO2Forest:
         self : object
             Fitted estimator.
         """        
-        x = csr_matrix(x)
+        #x = csr_matrix(x)
         
         self.train_data = x
         

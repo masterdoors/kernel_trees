@@ -8,7 +8,6 @@ Created on 16 мар. 2021 г.
 from sklearn import metrics
 from keras.datasets import cifar10
 
-from scipy.sparse import csr_matrix
 import numpy
 
 
@@ -26,15 +25,15 @@ import optuna
 fratio = [0.05, 0.08,0.1,0.2,0.3]
 tree_deth = [4,5,6,]
  
-x_sp_t = csr_matrix(x_train.reshape((x_train.shape[0],-1)),dtype=numpy.float32)#[:6000]
-x_sp_v = csr_matrix(x_validate.reshape((x_validate.shape[0],-1)),dtype=numpy.float32)#[:3000]
+x_sp_t = x_train.reshape((x_train.shape[0],-1))
+x_sp_v = x_validate.reshape((x_validate.shape[0],-1))
 
 def objective(trial):
     C = trial.suggest_float('C', 1000, 5500)
     d = trial.suggest_int('d', 4, 8)
     f = trial.suggest_float('f', 0.05, 0.5)
     g = trial.suggest_float('g', 0.001, 100)
-    
+    print(C,d,f,g)    
     score = [] 
     
     kf = KFold(n_splits=3)
@@ -47,7 +46,7 @@ def objective(trial):
         trc.fit(x_sp_t[train_index], Y_train[train_index])
         Y_v = trc.predict(x_sp_t[test_index])
         score.append(accuracy_score(Y_train[test_index],Y_v))
-                    
+        print(score)            
     return numpy.asarray(score).mean()#
 
 study = optuna.create_study(direction='maximize')
