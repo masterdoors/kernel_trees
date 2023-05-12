@@ -15,6 +15,18 @@ from sklearn.pipeline import Pipeline, make_pipeline
 import numpy
 from CO2_forest import *
 
+def weighter(tree,forest,w, offset = 0):
+    #todo: offset
+    t = forest.trees[tree]
+    if len(w.shape) == 1:
+        t.estimateChunkWeights(w[tree])
+    else:
+        w_ = numpy.zeros((t.leaves_number,w.shape[0]+1))
+        for i in range(1,w.shape[0]+1):
+            w_[:,i] = w[i - 1,offset:offset + t.leaves_number]
+        t.estimateChunkWeights(w_)        
+    return t
+
 
 def testerL2(splits,splits_Y,forests,x,Y,x_test,Y_test, c,n):
     tests = []
@@ -188,7 +200,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             
             for c,n,n2,t in tests:
                 if t < best:
-                    inter_log ("New best:",t,c,n,n2)                            
+                    print ("New best:",t,c,n,n2)                            
                     best = t  
                     best_c = c
                     best_n = n  
@@ -225,7 +237,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             best = 1. - accuracy_score(Y_test,y_pred_)
             best_f1 = f1_score(y_pred_,Y_test,average=None) 
             best_f1m = f1_score(y_pred_,Y_test,average='macro')            
-            inter_log ("LR l2-norm pruning + noise test result:", best, "f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n, "noise:", best_n2,"instability before:", best_before, "instability after:", best_after)              
+            print ("LR l2-norm pruning + noise test result:", best, "f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n, "noise:", best_n2,"instability before:", best_before, "instability after:", best_after)              
             
             best = 1.
             best_c = 0
@@ -256,7 +268,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
                     tests.append(1. - accuracy_score(splits_Y[i][1],y_pred_))
 
                 if numpy.asarray(tests).mean() + numpy.asarray(tests).std() < best:
-                    inter_log ("New best:",numpy.asarray(tests).mean(), numpy.asarray(tests).std(), c)
+                    print ("New best:",numpy.asarray(tests).mean(), numpy.asarray(tests).std(), c)
                     best = numpy.asarray(tests).mean() + numpy.asarray(tests).std()
                     best_c = c
                     
@@ -281,7 +293,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             best = 1. - accuracy_score(Y_test,y_pred_)                
             best_f1 = f1_score(y_pred_,Y_test,average=None)
             best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR orig test result:", best,"f1:",best_f1,best_f1m,"C:", best_c)            
+            print ("LR orig test result:", best,"f1:",best_f1,best_f1m,"C:", best_c)            
             
             best = 1.
             best_c = 0
@@ -291,7 +303,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             
             for c,n,t in tests:
                 if t < best:
-                    inter_log ("New best:",t,c,n)   
+                    print ("New best:",t,c,n)   
                     best = t  
                     best_c = c
                     best_n = n  
@@ -318,7 +330,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             best = 1. - accuracy_score(Y_test,y_pred_)
             best_f1 = f1_score(y_pred_,Y_test,average=None)
             best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR noised test result:", best,"f1:" ,best_f1,best_f1m,"C:", best_c, "noise:", best_n)
+            print ("LR noised test result:", best,"f1:" ,best_f1,best_f1m,"C:", best_c, "noise:", best_n)
             
             best = 1.
             best_c = 0
@@ -329,7 +341,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             
             for c,n,t in tests:
                 if t < best:
-                    inter_log ("New best:",t,c,n)   
+                    print ("New best:",t,c,n)   
                     best = t  
                     best_c = c
                     best_n = n  
@@ -371,7 +383,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             best = 1. - accuracy_score(Y_test,y_pred_)
             best_f1 = f1_score(y_pred_,Y_test,average=None) 
             best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR naive pruning test result:", best,"f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n)  
+            print ("LR naive pruning test result:", best,"f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n)  
             
             best = 1.
             best_c = 0
@@ -383,7 +395,7 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             
             for c,n,t in tests:
                 if t < best:
-                    inter_log ("New best:",t,c,n)                            
+                    print ("New best:",t,c,n)                            
                     best = t  
                     best_c = c
                     best_n = n  
@@ -417,13 +429,13 @@ class CO2ForestClassifierTested(CO2ForestClassifier):
             best = 1. - accuracy_score(Y_test,y_pred_)
             best_f1 = f1_score(y_pred_,Y_test,average=None) 
             best_f1m = f1_score(y_pred_,Y_test,average='macro')
-            inter_log ("LR l2-norm pruning test result:", best,"f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n,"instability before:", best_before, "instability after:", best_after)              
+            print ("LR l2-norm pruning test result:", best,"f1:",best_f1,best_f1m,"C:", best_c, "pruning:", best_n,"instability before:", best_before, "instability after:", best_after)              
             
             self.trees = Parallel(n_jobs=5,backend="multiprocessing")(delayed( weighter)(i,self,numpy.ones(self.n_estimators,)) for i in range(self.n_estimators))
             y_pred_ = self.predict(csr_matrix(x_test))
             rs_local = accuracy_score(Y_test,y_pred_)
             y_pred_ = self.predict(x)
             rs_train = accuracy_score(Y,y_pred_)
-            inter_log ("Train error orig:", 1. - rs_train)    
-            inter_log ("Test error orig:", 1. - rs_local)    
-            inter_log ("Delta orig:", rs_train - rs_local)    
+            print ("Train error orig:", 1. - rs_train)    
+            print ("Test error orig:", 1. - rs_local)    
+            print ("Delta orig:", rs_train - rs_local)    
