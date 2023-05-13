@@ -84,7 +84,11 @@ class BaseDecisionStamp:
             def nu(arr):
                 return np.asarray([1 + np.unique(arr[:,i].data,return_counts=True)[1].shape[0] for i in range(arr.shape[1])])
             
-            counts_p = nu(csc_matrix(x[sample_idx_ran]))
+            if isinstance(x,csr_matrix):
+                counts_p = nu(csc_matrix(x[sample_idx_ran]))
+            else:
+                counts_p = nu(x[sample_idx_ran])
+                    
             pos_idx = np.where(counts_p > 1)[0]
             
             if self.features_weight is not None:
@@ -120,7 +124,6 @@ class BaseDecisionStamp:
                     self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
                 else:
                     if self.kernel == 'gaussian':
-                        print("In ds type:", type(x).__name__)
                         self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
                         self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
                     else:
