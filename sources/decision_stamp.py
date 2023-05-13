@@ -120,6 +120,7 @@ class BaseDecisionStamp:
                     self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
                 else:
                     if self.kernel == 'gaussian':
+                        print("In ds type:", type(x).__name__)
                         self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
                         self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
                     else:

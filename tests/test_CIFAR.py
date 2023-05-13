@@ -28,6 +28,8 @@ tree_deth = [4,5,6,]
 x_sp_t = x_train.reshape((x_train.shape[0],-1))
 x_sp_v = x_validate.reshape((x_validate.shape[0],-1))
 
+print(x_train)
+
 def objective(trial):
     C = trial.suggest_float('C', 1000, 5500)
     d = trial.suggest_int('d', 4, 8)

@@ -139,7 +139,7 @@ class BaseCO2Forest:
         return numpy.hstack(indicators)    
     
     def predict_proba(self,x,Y=None,avg='macro',use_weight=True):
-        x = csr_matrix(x)           
+        #x = csr_matrix(x)           
         if self.reinforced:
             inds = self.getIndicators(x)
             inds = self.do_prune(inds,self.to_remove)

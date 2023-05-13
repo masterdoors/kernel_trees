@@ -57,8 +57,8 @@ x_sp_v = csr_matrix(x_validate,dtype=numpy.float32)#[:3000]
 
 def objective(trial):
     C = trial.suggest_float('C', 1000, 5500)
-    d = trial.suggest_int('d', 4, 7)
-    f = trial.suggest_float('f', 0.05, 0.5)
+    d = trial.suggest_int('d', 4, 8)
+    f = trial.suggest_float('f', 0.01, 0.5)
     g = trial.suggest_float('g', 0.001, 100)
     
     score = [] 
