@@ -83,7 +83,7 @@ class BaseCO2Forest:
         """        
         #x = csr_matrix(x)
         
-        self.train_data = x
+        self.train_data = x.astype(dtype=numpy.float64)
         
         self.le = LabelEncoder().fit(Y)
         Y = self.le.transform(Y)
