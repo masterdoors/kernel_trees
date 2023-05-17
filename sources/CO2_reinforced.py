@@ -5,7 +5,6 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import MinMaxScaler, Normalizer
 from sklearn.pipeline import make_pipeline
-from virtualenv.create.via_global_ref.builtin import via_global_self_do
 
 class Reinforced:
     def addNoise(self,indicators, noise= 0.):
@@ -77,29 +76,47 @@ class Reinforced:
         self.lr = lr
         
 class ReinforcedForestClassifier(CO2ForestClassifier, Reinforced):
-     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0, id_=0,univariate_ratio=0.0,verbose=0):
-         pass
+                 gamma=1000.,criteria='gini',spatial_mul=1.0, id_=0,univariate_ratio=0.0,\
+                 n=0.1, nC=1,verbose=0):
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul, id_,univariate_ratio,verbose)
+        self.n = n
+        self.nC = nC
      
-     def fit(self):
-         pass
+    def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
+        super().fit(x,Y,x_test, Y_test,model, sample_weights)
+        self.reinforce_prune(self.n,self.nC,x,Y,sample_weights)
      
-     def predict(self):
-         pass
+    def predict(self,x,Y=None,use_weight=True):
+        lr_data = self.getIndicators(x)
+        mm = make_pipeline(MinMaxScaler(), Normalizer())
+        lr_data = mm.transform(lr_data)               
+
+        lr_data = self.do_prune(lr_data,self.to_remove) 
+
+        return self.lr.predict(lr_data)
 
 class ReinforcedForestRegressor(CO2ForestRegressor, Reinforced):
      def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0):
-         pass
+                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0,\
+                 n=0.1, nC=1, verbose=0):
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul, id_,univariate_ratio,verbose)
+        self.n = n
+        self.nC = nC
     
-     def fit(self):
-         pass
+     def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
+        super().fit(x,Y,x_test, Y_test,model, sample_weights)
+        self.reinforce_prune(self.n,self.nC,x,Y,sample_weights)
      
-     def predict(self):
+     def predict(self,x,Y=None,use_weight=True):
          pass
     
     
