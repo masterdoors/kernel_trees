@@ -136,7 +136,7 @@ class BaseCO2Forest:
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0,verbose=0):
+                 gamma=1000.,criteria='gini',spatial_mul=1.0, id_=0,univariate_ratio=0.0,verbose=0):
         self.criteria = criteria
         self.C = C
         self.min_samples_split = min_samples_split
@@ -155,7 +155,6 @@ class BaseCO2Forest:
         self.spatial_mul = spatial_mul
         self.prune_level = 0
         self.reC = 10.
-        self.reinforced = reinforced
         self.id_ = id_
         self.univariate_ratio = univariate_ratio
         self.verbose = verbose
