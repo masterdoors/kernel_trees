@@ -16,9 +16,6 @@ from numpy import argmax
 from numpy import asarray
 
 from joblib import Parallel, delayed
-from scipy.sparse.csr import csr_matrix
-
-
 import numpy
 
 from sklearn.preprocessing import LabelEncoder
@@ -58,7 +55,7 @@ class BaseCO2Forest:
     def stat(self):
         return Parallel(n_jobs=self.n_jobs,backend="threading")(delayed(statter)(t) for t in self.trees)
     
-    def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
+    def fit(self,X,y,model=False, sample_weights = None):
         """
         Build a forest of trees from the training set (X, y).
         Parameters
@@ -81,26 +78,20 @@ class BaseCO2Forest:
         self : object
             Fitted estimator.
         """        
-        #x = csr_matrix(x)
+        X = X.astype(dtype=numpy.float64)
+        self.train_data = X
         
-        x = x.astype(dtype=numpy.float64)
-        self.train_data = x
-        
-        self.le = LabelEncoder().fit(Y)
-        Y = self.le.transform(Y)
-        if Y_test is not None:
-            Y_test = self.le.transform(Y_test)
+        self.le = LabelEncoder().fit(y)
+        Y = self.le.transform(y)
      
         if not model:
-            self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(x,Y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
+            self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(X,y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
         else:
             with open('forest.pickle', 'rb') as f:
                 self.trees = pickle.load(f).trees     
         
-        if self.reinforced:
-            self.reinforce_prune(self.prune_level,self.reC,x,Y,sample_weights)
-            
-    def predict(self,x,Y=None,use_weight=True):
+
+    def predict(self,X,use_weight=True):
         """
         Predict class for X.
         The predicted class of an input sample is a vote by the trees in
@@ -118,44 +109,28 @@ class BaseCO2Forest:
         y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
             The predicted classes.
         """        
-        if Y is not None:
-            proba, cmp = self.predict_proba(x,Y,use_weight=use_weight)
-        else:
-            proba = self.predict_proba(x,Y,use_weight=use_weight)   
+        proba = self.predict_proba(X,use_weight=use_weight)   
             
         res =  argmax(proba, axis = 1)
         res = self.le.inverse_transform(res)
-        if Y is not None:
-            return res,cmp
-        else:
-            return res    
+        return res    
         
-    def getIndicators(self,x, noise= 0., balance_noise = False):
+    def getIndicators(self,X, noise= 0., balance_noise = False):
         
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing",require="sharedmem")(delayed(indicator)(x,self.train_data,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing",require="sharedmem")(delayed(indicator)(X,self.train_data,t,noise,balance_noise) for t in self.trees)
 
         res = sorted(res, key=lambda tup: tup[1])
         indicators = [r for r,_ in res]
            
         return numpy.hstack(indicators)    
     
-    def predict_proba(self,x,Y=None,avg='macro',use_weight=True):
-        #x = csr_matrix(x)           
-        if self.reinforced:
-            inds = self.getIndicators(x)
-            inds = self.do_prune(inds,self.to_remove)
-            r = self.lr.decision_function(inds)
-            return r
-        else:    
-            if Y is not None:
-                Y = self.le.transform(Y)
-
-            res = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(probber)(x,self.train_data,t,False,use_weight,Y is not None) for t in self.trees)
-           
-            if avg == 'macro':
-                return asarray(res).sum(axis=0)#[:,1:]
-            else:
-                return asarray(res)#[:,1:]
+    def predict_proba(self,X,avg='macro',use_weight=True):
+        res = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(probber)(X,self.train_data,t,False,use_weight,False) for t in self.trees)
+       
+        if avg == 'macro':
+            return asarray(res).sum(axis=0)
+        else:
+            return asarray(res)
 
         
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
@@ -263,10 +238,10 @@ class CO2ForestClassifier(BaseCO2Forest, ClassifierMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0,verbose=0):
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,verbose=0):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
-                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio,verbose)
+                 gamma,criteria,spatial_mul,id_,univariate_ratio,verbose)
         self.treeClass = co2.CO2TreeClassifier 
 
 class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
@@ -325,9 +300,9 @@ class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='mse',spatial_mul=1.0,reinforced = False, id_=0,univariate_ratio=0.0, verbose=0):
+                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
-                 gamma,criteria,spatial_mul,reinforced, id_,univariate_ratio, verbose)
+                 gamma,criteria,spatial_mul,id_,univariate_ratio, verbose)
         self.treeClass = co2.CO2TreeRegressor
 

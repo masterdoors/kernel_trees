@@ -3,7 +3,10 @@ README.md
 setup.py
 sources/CO2_criteria.py
 sources/CO2_forest.py
+sources/CO2_reinforced.py
 sources/CO2_tree.py
+sources/GPU_decision_stamp.py
+sources/GPU_forest.py
 sources/decision_stamp.py
 sources/testers.py
 sources/kernel_forest.egg-info/PKG-INFO

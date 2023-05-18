@@ -1,8 +1,6 @@
 from CO2_forest import *
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import f1_score
-from sklearn.metrics import accuracy_score
+from sklearn.linear_model import SGDRegressor
 from sklearn.preprocessing import MinMaxScaler, Normalizer
 from sklearn.pipeline import make_pipeline
 
@@ -16,7 +14,7 @@ class Reinforced:
             indicators[nonzero[idxs],i] = 0. #let's make the classifiers different again
         return indicators 
         
-    def prune(self, indicators, coefs, ratio):
+    def prune(self, coefs, ratio):
         offset = 0
         j = 0
         norm_sums = {}
@@ -50,73 +48,83 @@ class Reinforced:
         indicators[indicators > 1.] = 1.   
         return indicators  
     
-    def reinforce_prune(self,n,C,X,Y,sample_weigths = None):
-        lr = LogisticRegression(C=C,
-                        fit_intercept=False,
-                        solver='lbfgs',
-                        max_iter=100,
-                        multi_class='multinomial', n_jobs=-1)            
-
+    def reinforce_prune(self,n,X,Y,sample_weigths = None):
         lr_data = self.getIndicators(X)
         mm = make_pipeline(MinMaxScaler(), Normalizer())
         mm.fit(lr_data)
 
         lr_data = mm.transform(lr_data)               
-        lr.fit(lr_data, Y) 
+        self.lr.fit(lr_data, Y) 
 
-        to_remove,_,_ = self.prune(lr_data, lr.coef_, n)
+        to_remove,_,_ = self.prune(self.lr.coef_, n)
         lr_data = self.do_prune(lr_data,to_remove) 
         self.to_remove = to_remove
-        lr = LogisticRegression(C=C,
-                        fit_intercept=False,
-                        solver='lbfgs',
-                        max_iter=100,
-                        multi_class='multinomial', n_jobs=-1) 
-        lr.fit(lr_data, Y,sample_weigths) 
-        self.lr = lr
+        self.lr.fit(lr_data, Y,sample_weigths) 
         
-class ReinforcedForestClassifier(CO2ForestClassifier, Reinforced):
+class BaseReinforcedForest(BaseCO2Forest, Reinforced):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
                  gamma=1000.,criteria='gini',spatial_mul=1.0, id_=0,univariate_ratio=0.0,\
-                 n=0.1, nC=1,verbose=0):
+                 prune_threshold=0.1, verbose=0):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
                  gamma,criteria,spatial_mul, id_,univariate_ratio,verbose)
-        self.n = n
-        self.nC = nC
+        self.prune_threshold = prune_threshold
      
     def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
+        if self.verbose > 0:
+            print("Fit an ensemble ")
+            
         super().fit(x,Y,x_test, Y_test,model, sample_weights)
-        self.reinforce_prune(self.n,self.nC,x,Y,sample_weights)
+        
+        if self.verbose > 0:
+            print("Reinforce the ensemble ")
+
+        self.reinforce_prune(self.prune_threshold,x,Y,sample_weights)
      
-    def predict(self,x,Y=None,use_weight=True):
-        lr_data = self.getIndicators(x)
-        mm = make_pipeline(MinMaxScaler(), Normalizer())
-        lr_data = mm.transform(lr_data)               
+    def predict_proba(self,X):
+        inds = self.getIndicators(X)
+        inds = self.do_prune(inds,self.to_remove)
+        r = self.lr.decision_function(inds)
+        return r
 
-        lr_data = self.do_prune(lr_data,self.to_remove) 
+class ReinforcedForestClassifier(BaseReinforcedForest, ClassifierMixin):
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+                 dual=True,max_iter=1000000,
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,\
+                 prune_threshold=0.1, pruneC=1,verbose=0):
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul,id_,univariate_ratio,prune_threshold, verbose)
+        self.treeClass = co2.CO2TreeClassifier 
+        self.lr = LogisticRegression(C=pruneC,
+                        fit_intercept=False,
+                        solver='lbfgs',
+                        max_iter=100,
+                        multi_class='multinomial', n_jobs=-1)    
 
-        return self.lr.predict(lr_data)
 
-class ReinforcedForestRegressor(CO2ForestRegressor, Reinforced):
-     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+class ReinforcedForestRegressor(BaseReinforcedForest, RegressorMixin):
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
                  gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0,\
-                 n=0.1, nC=1, verbose=0):
+                 prune_threshold=0.1, pruneC=1, verbose=0):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
-                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
-                 gamma,criteria,spatial_mul, id_,univariate_ratio,verbose)
-        self.n = n
-        self.nC = nC
+                dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                gamma,criteria,spatial_mul, id_,univariate_ratio,\
+                prune_threshold, verbose)
+        self.treeClass = co2.CO2TreeRegressor 
+        self.lrClass = SGDRegressor(alpha=1. / pruneC,
+                                    fit_intercept=False,
+                                    max_iter=100)  
+        self.lrClass.decision_function = self.lrClass.predict
+        
+    def predict(self, X):
+        return self.predict_proba(X)                                       
+            
     
-     def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
-        super().fit(x,Y,x_test, Y_test,model, sample_weights)
-        self.reinforce_prune(self.n,self.nC,x,Y,sample_weights)
-     
-     def predict(self,x,Y=None,use_weight=True):
-         pass
     
     
