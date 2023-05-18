@@ -82,7 +82,7 @@ class BaseCO2Forest:
         self.train_data = X
         
         self.le = LabelEncoder().fit(y)
-        Y = self.le.transform(y)
+        y = self.le.transform(y)
      
         if not model:
             self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(X,y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
