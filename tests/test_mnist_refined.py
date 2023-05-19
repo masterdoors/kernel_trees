@@ -7,7 +7,6 @@ Created on 16 мар. 2021 г.
 
 from sklearn import datasets, metrics
 
-from scipy.sparse import csr_matrix
 from sklearn import preprocessing
 from numpy import asarray
 from numpy.random import randint as rint
@@ -15,7 +14,7 @@ from numpy.random import randint as rint
 import numpy
 
 
-import CO2_reinforced as co2f
+import CO2_refined as co2f
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
@@ -52,8 +51,8 @@ x_train, x_validate, Y_train, Y_validate = train_test_split(
     x, Y, test_size=0.5, shuffle=False
 )
 
-x_sp_t = csr_matrix(x_train,dtype=numpy.float32)#[:6000]
-x_sp_v = csr_matrix(x_validate,dtype=numpy.float32)#[:3000]
+x_sp_t = x_train
+x_sp_v = x_validate
 
 def objective(trial):
     C = trial.suggest_float('C', 1000, 5500)
@@ -67,7 +66,7 @@ def objective(trial):
     
     kf = KFold(n_splits=3)
     for _, (train_index, test_index) in enumerate(kf.split(x_sp_t)):
-        trc = co2f.ReinforcedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+        trc = co2f.RefinedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                                    max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
                                    n_estimators=30,\
                                    gamma=g,criteria='gain', prune_threshold=thrx, pruneC=nc)        
@@ -89,7 +88,7 @@ f = study.best_trial.params["f"]
 thrx = study.best_trial('thrx')
 nc = study.best_trial('nc')
 
-trc = co2f.ReinforcedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+trc = co2f.RefinedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                            max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
                            n_estimators=30,\
                            gamma=g,criteria='gain', prune_threshold=thrx, pruneC=nc)        

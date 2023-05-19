@@ -61,7 +61,7 @@ class Reinforced:
         self.to_remove = to_remove
         self.lr.fit(lr_data, Y,sample_weigths) 
         
-class BaseReinforcedForest(BaseCO2Forest, Reinforced):
+class BaseRefinedForest(BaseCO2Forest, Reinforced):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
@@ -89,7 +89,7 @@ class BaseReinforcedForest(BaseCO2Forest, Reinforced):
         r = self.lr.decision_function(inds)
         return r
 
-class ReinforcedForestClassifier(BaseReinforcedForest, ClassifierMixin):
+class RefinedForestClassifier(BaseRefinedForest, ClassifierMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
@@ -106,7 +106,7 @@ class ReinforcedForestClassifier(BaseReinforcedForest, ClassifierMixin):
                         multi_class='multinomial', n_jobs=-1)    
 
 
-class ReinforcedForestRegressor(BaseReinforcedForest, RegressorMixin):
+class RefinedForestRegressor(BaseRefinedForest, RegressorMixin):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
