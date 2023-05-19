@@ -72,11 +72,11 @@ class BaseReinforcedForest(BaseCO2Forest, Reinforced):
                  gamma,criteria,spatial_mul, id_,univariate_ratio,verbose)
         self.prune_threshold = prune_threshold
      
-    def fit(self,x,Y,x_test=None, Y_test=None,model=False, sample_weights = None):
+    def fit(self,x,Y,model=False, sample_weights = None):
         if self.verbose > 0:
             print("Fit an ensemble ")
             
-        super().fit(x,Y,x_test, Y_test,model, sample_weights)
+        super().fit(x,Y,model, sample_weights)
         
         if self.verbose > 0:
             print("Reinforce the ensemble ")
