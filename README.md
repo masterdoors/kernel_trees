@@ -142,7 +142,7 @@ Refined Kernel forest based on the method from the paper:
 
 *Ren, S., Cao, X., Wei, Y., & Sun, J. (2015). Global refinement of random forest. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (pp. 723-730).*
 
-```
+```python
 from sklearn import datasets, metrics
 
 from sklearn import preprocessing
