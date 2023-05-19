@@ -142,7 +142,7 @@ Refined Kernel forest based on the method from the paper:
 
 *Ren, S., Cao, X., Wei, Y., & Sun, J. (2015). Global refinement of random forest. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (pp. 723-730).*
 
-```
+```python
 from sklearn import datasets, metrics
 
 from sklearn import preprocessing
@@ -152,7 +152,7 @@ from numpy.random import randint as rint
 import numpy
 
 
-import CO2_reinforced as co2f
+import CO2_refined as co2f
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
@@ -204,7 +204,7 @@ def objective(trial):
     
     kf = KFold(n_splits=3)
     for _, (train_index, test_index) in enumerate(kf.split(x_sp_t)):
-        trc = co2f.ReinforcedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+        trc = co2f.RefinedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                                    max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
                                    n_estimators=30,\
                                    gamma=g,criteria='gain', prune_threshold=thrx, pruneC=nc)        
@@ -226,7 +226,7 @@ f = study.best_trial.params["f"]
 thrx = study.best_trial('thrx')
 nc = study.best_trial('nc')
 
-trc = co2f.ReinforcedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+trc = co2f.RefinedForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                            max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
                            n_estimators=30,\
                            gamma=g,criteria='gain', prune_threshold=thrx, pruneC=nc)        
