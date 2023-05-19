@@ -18,13 +18,18 @@ tests - files and notebooks to run various experiments.
 thirdparty - files to patch Scikit-learn (deprecated).
 
 # Dependences:
-1. numpy/scipy 1.18.0/1.5.0 or higher
+(One can use pip to install all of them)
+1. Python 3.8.16
 
-2. sympy 1.7 or higher
+2. Cython
 
-3. joblib 1.0.0 or higher
+3. numpy/scipy 1.21.0/1.5.0 or higher
 
-4. Fork of the scikit-learn 0.22 (use pip install git+https://github.com/masterdoors/scikit-learn to install). 
+4. sympy 1.7 or higher
+
+5. joblib 1.0.0 or higher
+
+6. Fork of the scikit-learn 0.22 (use pip install git+https://github.com/masterdoors/scikit-learn to install). 
 
 # Installation:
 ## Kernel Forests
