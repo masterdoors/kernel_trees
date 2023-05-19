@@ -117,7 +117,7 @@ class BaseCO2Forest:
         
     def getIndicators(self,X, noise= 0., balance_noise = False):
         
-        res = Parallel(n_jobs=self.n_jobs,backend="multiprocessing",require="sharedmem")(delayed(indicator)(X,self.train_data,t,noise,balance_noise) for t in self.trees)
+        res = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(indicator)(X,self.train_data,t,noise,balance_noise) for t in self.trees)
 
         res = sorted(res, key=lambda tup: tup[1])
         indicators = [r for r,_ in res]
