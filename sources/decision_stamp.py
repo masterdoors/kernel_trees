@@ -459,15 +459,6 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         super().__init__(n_classes,class_max, features_weight, kernel, \
                  sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed,verbose)
         
-#     def stamp_sign(self,x,train_data, sample = True):
-#         return super().stamp_sign(x,train_data, sample)     
-# 
-#     def predict_stat(self,x,sample = True):
-#         return super().predict_stat(x,sample)
-# 
-#     def predict_proba(self,x,Y = None,train_data=None,sample = True, use_weight = True, get_id=False):
-#         return super().predict_proba(x,Y,train_data,sample, use_weight, get_id)           
-    
     def calcCriterion(self,x,Y, train_data,report = False):  
         H = self.stamp_sign(x, train_data, sample = False)
         return self.criteriaMSE(Y.mean(),Y) - self.criteriaMSE(self.p0,Y[H == 1]) - self.criteriaMSE(self.p1,Y[H == -1])          
@@ -513,7 +504,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
         return gini_res          
     
-class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin, SKLearnOptimizer):
+class DecisionStampClassifier(BaseDecisionStampClassifier, SKLearnOptimizer):
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
                  max_iter=1000,gamma=1000.,\
@@ -521,7 +512,7 @@ class DecisionStampClassifier(BaseDecisionStamp, ClassifierMixin, SKLearnOptimiz
         super().__init__(n_classes,class_max, features_weight, kernel, \
                  sample_ratio, feature_ratio,dual,C,tol, max_iter,gamma,balance,criteria,seed, verbose)
             
-class DecisionStampRegressor(BaseDecisionStamp, ClassifierMixin, SKLearnOptimizer):      
+class DecisionStampRegressor(BaseDecisionStampRegressor, SKLearnOptimizer):      
     def __init__(self, n_classes,class_max, features_weight, kernel='linear', \
                  sample_ratio=0.5, feature_ratio=0.5,dual=True,C=100.,tol=0.001,\
                  max_iter=1000,gamma=1000.,\
