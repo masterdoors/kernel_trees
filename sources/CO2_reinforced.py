@@ -83,7 +83,7 @@ class BaseReinforcedForest(BaseCO2Forest, Reinforced):
 
         self.reinforce_prune(self.prune_threshold,x,Y,sample_weights)
      
-    def predict_proba(self,X):
+    def predict_proba(self,X, use_weight=False):
         inds = self.getIndicators(X)
         inds = self.do_prune(inds,self.to_remove)
         r = self.lr.decision_function(inds)
