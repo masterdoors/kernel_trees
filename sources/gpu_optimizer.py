@@ -1,8 +1,16 @@
-'''
-Created on 19 мая 2023 г.
+import numpy as np
+import numpy
 
-@author: keen
-'''
+from thundersvm import *
+
+from sklearn.tree import DecisionTreeClassifier
+
+from scipy.sparse.csc import csc_matrix
+from scipy.sparse.csr import csr_matrix
+
+import traceback
+
+
 class GPUOptimizer:
     def gpu_optimization(self,x,Y,sample_weight,samp_counts):
         #random.seed()
@@ -66,24 +74,20 @@ class GPUOptimizer:
             try:
                 if self.kernel == 'linear':
                     if not self.dual:
-                        self.model = SGDClassifier(n_iter_no_change=5,loss='squared_hinge', alpha=1. / (100*self.C), fit_intercept=True, max_iter=self.max_iter, tol=self.tol, eta0=0.5,shuffle=True, learning_rate='adaptive')
-                        self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weight=deltas)
-                    else:  
-                        self.model = LinearSVC(penalty='l2',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter)
-                        self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weight=deltas)
-                    
-                #else:
-                if self.kernel == 'polynomial':
-                    self.model = SVC(kernel='poly',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma)
-                    self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
+                        self.model = SVC(kernel='linear',dual=self.dual,tol=self.tol,C = self.C,max_iter=self.max_iter,max_mem_size=10)
+                        self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weights=deltas)
                 else:
-                    if self.kernel == 'gaussian':
-                        self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,gamma=self.gamma,cache_size=4000)
-                        self.model.fit(x,H.reshape(-1),self.features_weight,sample_idx_ran,sample_weight=deltas)   
+                    if self.kernel == 'polynomial':
+                        self.model = SVC(kernel='polynomial',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma,max_mem_size=10)
+                        self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weights=deltas)                       
                     else:
-                        if self.kernel == 'univariate':
-                            self.model = DecisionTreeClassifier( criterion= self.criteria_str, max_depth=1)
-                            self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1))
+                        if self.kernel == 'gaussian':
+                            self.model = SVC(kernel='rbf',tol=self.tol,C = self.C,max_iter=self.max_iter,degree=4,gamma=self.gamma,max_mem_size=10)
+                            self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1),sample_weights=deltas)  
+                        else:
+                            if self.kernel == 'univariate':
+                                self.model = DecisionTreeClassifier( criterion= self.criteria_str, max_depth=1)
+                                self.model.fit(x[sample_idx_ran][:, self.features_weight],H.reshape(-1))
                         
             except Exception as exp:
                 print (str(exp))

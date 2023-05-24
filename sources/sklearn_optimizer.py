@@ -5,8 +5,6 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 
-#import linearSVM
-
 from sklearn.tree import DecisionTreeClassifier
 
 from scipy.sparse.csc import csc_matrix

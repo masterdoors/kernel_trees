@@ -3,33 +3,19 @@ Created on 26 марта 2016 г.
 
 @author: keen
 '''
-
-
-from numpy.random import randint
-import traceback
-from scipy.sparse import csr_matrix
 from scipy.sparse import coo_matrix
 from copy import deepcopy
-import numpy as np
-
 import math
 
-from sklearn.linear_model import SGDClassifier
-from sklearn.preprocessing import LabelEncoder
-from sklearn.svm import LinearSVC
-from sklearn.svm import SVC
 from sklearn.cluster import KMeans
 
 from sklearn.base import ClassifierMixin
 from sklearn.base import RegressorMixin
 
 from sympy.utilities.iterables import multiset_permutations
-#import linearSVM
-
-from sklearn.tree import DecisionTreeClassifier
 
 from numpy import isnan
-from scipy.sparse.csc import csc_matrix
+
 
 from sklearn_optimizer import *
 
