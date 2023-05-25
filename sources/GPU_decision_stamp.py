@@ -5,11 +5,11 @@ from gpu_optimizer import *
 class GPUDecisionStampClassifier(BaseDecisionStampClassifier, GPUOptimizer):
     def stamp_sign(self,x,train_data, sample = True):
         if sample:
-		res = self.model.predict(x[:,self.features_weight], train_data[self.sample_weight][:,self.features_weight])
-		return np.sign(res)
+            res = self.model.predict(x[:,self.features_weight], train_data[self.sample_weight][:,self.features_weight])
+            return np.sign(res)
         else:
-		res = self.model.predict(x, train_data[self.sample_weight][:,self.features_weight])
-		return np.sign(res) 
+            res = self.model.predict(x, train_data[self.sample_weight][:,self.features_weight])
+            return np.sign(res) 
 
     def optimization(self,x,Y,sample_weight,samp_counts):
         super().optimization(x,Y,sample_weight,samp_counts)
@@ -17,11 +17,11 @@ class GPUDecisionStampClassifier(BaseDecisionStampClassifier, GPUOptimizer):
 class GPUDecisionStampRegressor(BaseDecisionStampRegressor, GPUOptimizer):
     def stamp_sign(self,x,train_data, sample = True):
         if sample:
-		res = self.model.predict(x[:,self.features_weight], train_data[self.sample_weight][:,self.features_weight])
-		return np.sign(res)
+            res = self.model.predict(x[:,self.features_weight], train_data[self.sample_weight][:,self.features_weight])
+            return np.sign(res)
         else:
-		res = self.model.predict(x, train_data[self.sample_weight][:,self.features_weight])
-		return np.sign(res) 
+            res = self.model.predict(x, train_data[self.sample_weight][:,self.features_weight])
+        return np.sign(res) 
 
     def optimization(self,x,Y,sample_weight,samp_counts):
         super().optimization(x,Y,sample_weight,samp_counts)       
