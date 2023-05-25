@@ -34,7 +34,7 @@ class GPUForest:
         forest = self
         for _ in range(self.n_estimators):
             tree = co2.BaseCO2Tree(C=forest.C , kernel=forest.kernel,\
-            tol=forest.tol, max_iter=forest.max_iter,max_deth = forest.max_depth,\
+            tol=forest.tol, max_iter=forest.max_iter,max_depth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
             min_samples_leaf = forest.min_samples_leaf, seed = None,\
             sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
@@ -61,8 +61,22 @@ class GPUForest:
         return proba   
     
 class GPUForestClassifier(GPUForest, CO2ForestClassifier):
-    pass
-
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+                 dual=True,max_iter=1000000,
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,verbose=0):    
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul,id_,univariate_ratio, verbose)
+        self.treeClass = GPUTreeClassifier
+        
+     
 class GPUForestRegressor(GPUForest, CO2ForestRegressor):
-    pass
-    
+    def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+                 dual=True,max_iter=1000000,
+                 min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
+                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0):
+        super().__init__(C, kernel, max_depth, tol, min_samples_split , \
+                 dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
+                 gamma,criteria,spatial_mul,id_,univariate_ratio, verbose)
+        self.treeClass = GPUTreeRegressor    
