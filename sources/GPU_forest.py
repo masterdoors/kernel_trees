@@ -32,11 +32,11 @@ class GPUForest:
     def fit(self,X,y):
         self.trees = []
         forest = self
-        for _ in range(self.n_estimators):
+        for i in range(self.n_estimators):
             tree = forest.treeClass(C=forest.C , kernel=forest.kernel,\
             tol=forest.tol, max_iter=forest.max_iter,max_depth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
-            min_samples_leaf = forest.min_samples_leaf, seed = None,\
+            min_samples_leaf = forest.min_samples_leaf, seed = i,\
             sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
             gamma=forest.gamma,criteria = forest.criteria)
 
