@@ -12,7 +12,7 @@ import traceback
 
 
 class GPUOptimizer:
-    def gpu_optimization(self,x,Y,sample_weight,samp_counts):
+    def optimization(self,x,Y,sample_weight,samp_counts):
         #random.seed()
         self.counts = numpy.zeros((x.shape[0],))
         if x.shape[0] > 0:
