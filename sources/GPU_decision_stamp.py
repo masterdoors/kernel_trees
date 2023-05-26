@@ -13,7 +13,7 @@ class GPUDecisionStampClassifier(BaseDecisionStampClassifier, GPUOptimizer):
             return np.sign(res) 
 
     def optimization(self,x,Y,sample_weight,samp_counts):
-        super().optimization(x,Y,sample_weight,samp_counts)
+        return super().optimization(x,Y,sample_weight,samp_counts)
     
 class GPUDecisionStampRegressor(BaseDecisionStampRegressor, GPUOptimizer):
     def stamp_sign(self,x,train_data, sample = True):
@@ -25,5 +25,5 @@ class GPUDecisionStampRegressor(BaseDecisionStampRegressor, GPUOptimizer):
         return np.sign(res) 
 
     def optimization(self,x,Y,sample_weight,samp_counts):
-        super().optimization(x,Y,sample_weight,samp_counts)       
+        return super().optimization(x,Y,sample_weight,samp_counts)       
     
