@@ -33,7 +33,7 @@ class GPUForest:
         self.trees = []
         forest = self
         for _ in range(self.n_estimators):
-            tree = co2.BaseCO2Tree(C=forest.C , kernel=forest.kernel,\
+            tree = forest.treeClass(C=forest.C , kernel=forest.kernel,\
             tol=forest.tol, max_iter=forest.max_iter,max_depth = forest.max_depth,\
             min_samples_split = forest.min_samples_split,dual=forest.dual,\
             min_samples_leaf = forest.min_samples_leaf, seed = None,\
