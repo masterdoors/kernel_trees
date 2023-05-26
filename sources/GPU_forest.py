@@ -30,6 +30,13 @@ class GPUTreeRegressor(BaseCO2Tree, RegressorMixin):
 
 class GPUForest:
     def fit(self,X,y):
+        
+        X = X.astype(dtype=numpy.float64)
+        self.train_data = X
+        
+        self.le = LabelEncoder().fit(y)
+        y = self.le.transform(y)        
+        
         self.trees = []
         forest = self
         for i in range(self.n_estimators):
