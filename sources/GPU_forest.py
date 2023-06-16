@@ -55,7 +55,7 @@ class GPUForest:
         for tree in self.trees:
             probas.append(tree.predict_proba(X,None,  train_data =  self.train_data,preprocess = False,stat_only=False,use_weight=use_weight)) 
 
-        proba =  (numpy.asarray(probas).sum(axis=0), 1. / self.n_estimators)
+        proba =  numpy.asarray(probas).sum(axis=0)
         res =  numpy.argmax(proba, axis = 1)
         return self.le.inverse_transform(res)   
     
