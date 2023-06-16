@@ -53,7 +53,7 @@ class GPUForest:
     def predict(self,X,use_weight=True):
         probas = []
         for tree in self.trees:
-            probas.append(tree.predict_proba(X,None,preprocess = False,stat_only=False,use_weight=use_weight)) 
+            probas.append(tree.predict_proba(X,None,  train_data =  self.train_data,preprocess = False,stat_only=False,use_weight=use_weight)) 
 
         proba =  (numpy.asarray(probas).sum(axis=0), 1. / self.n_estimators)
         res =  numpy.argmax(proba, axis = 1)
@@ -62,7 +62,7 @@ class GPUForest:
     def predict_proba(self,X,use_weight=True):
         probas = []
         for i in range(len(self.trees)):
-            probas.append(self.trees[i].predict_proba(X,None,preprocess = False,stat_only=False,use_weight=use_weight)) 
+            probas.append(self.trees[i].predict_proba(X,None,train_data =  self.train_data,preprocess = False,stat_only=False,use_weight=use_weight)) 
 
         proba =  numpy.asarray(probas)#[:,1:]
         return proba   
