@@ -447,7 +447,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         
     def calcCriterion(self,x,Y, train_data,report = False):  
         H = self.stamp_sign(x, train_data, sample = False)
-        return self.criteriaMSE(Y.mean(),Y) - self.criteriaMSE(self.p0,Y[H == 1]) - self.criteriaMSE(self.p1,Y[H == -1])          
+        return self.criteria(Y.mean(),Y) - self.criteria(self.p0,Y[H == 1]) - self.criteria(self.p1,Y[H == -1])          
     
     def setupSlackRescaling(self,Y_tmp): 
         k = KMeans(n_clusters=2)
@@ -455,7 +455,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
 
         deltas = np.zeros(shape=(H.shape[0]))
 
-        orig_criterion = self.criteriaMSE(Y_tmp[H == -1].mean(),Y_tmp[H == -1]) + self.criteriaMSE(Y_tmp[H == 1].mean(),Y_tmp[H == 1])
+        orig_criterion = self.criteria(Y_tmp[H == -1].mean(),Y_tmp[H == -1]) + self.criteria(Y_tmp[H == 1].mean(),Y_tmp[H == 1])
         for i in range(H.shape[0]):
             H[i] = - H[i]
             la = Y_tmp[H == -1]
@@ -463,7 +463,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
             if la.shape[0] == 0 or ra.shape[0] == 0:
                 deltas[i] = Y_tmp.std() * Y_tmp.std() 
             else:    
-                deltas[i] = self.criteriaMSE(la.mean(),la) + self.criteriaMSE(ra.mean(),ra) - orig_criterion
+                deltas[i] = self.criteria(la.mean(),la) + self.criteria(ra.mean(),ra) - orig_criterion
             H[i] = - H[i]
 
         ratio = 1
@@ -485,7 +485,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         self.p1 = Y_tmp[H < 0].mean()
         
         #print (self.p0, self.p1)
-        gini_res = self.criteriaMSE(Y_tmp.mean(),Y_tmp) - self.criteriaMSE(self.p0,Y_tmp[H == 1]) - self.criteriaMSE(self.p1,Y_tmp[H == -1])
+        gini_res = self.criteria(Y_tmp.mean(),Y_tmp) - self.criteria(self.p0,Y_tmp[H == 1]) - self.criteria(self.p1,Y_tmp[H == -1])
         #print(gini_res)
         self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
         return gini_res          
