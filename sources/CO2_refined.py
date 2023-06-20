@@ -15,6 +15,9 @@ class Reinforced:
         return indicators 
         
     def prune(self, coefs, ratio):
+        
+        if len(coefs.shape) == 1:
+            coefs = coefs.reshape((1,-1))    
         offset = 0
         j = 0
         norm_sums = {}
