@@ -485,7 +485,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         self.p1 = Y_tmp[H > 0].mean()
         
         #print (self.p0, self.p1)
-        gini_res = self.criteria(Y_tmp.mean(),Y_tmp) - self.criteria(self.p0,Y_tmp[H == 1]) - self.criteria(self.p1,Y_tmp[H == -1])
+        gini_res = self.criteria(Y_tmp.mean(),Y_tmp) - self.criteria(self.p0,Y_tmp[H == -1]) - self.criteria(self.p1,Y_tmp[H == 1])
         #print(gini_res)
         self.counts = [] #numpy.hstack([samp_counts,self.counts]) 
         return gini_res          
