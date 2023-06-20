@@ -3,17 +3,17 @@ from sklearn.ensemble import RandomForestRegressor
 import CO2_forest as co2f
 import matplotlib.pyplot as plt
 
-X = np.sort(5 * np.random.rand(10, 1), axis=0)
+X = np.sort(5 * np.random.rand(40, 1), axis=0)
 y = np.sin(X).ravel()
 
 # add noise to targets
-#y[::5] += 3 * (0.5 - np.random.rand(8))
+y[::5] += 3 * (0.5 - np.random.rand(8))
 
 rf = RandomForestRegressor(max_depth=4)
 
-krf = co2f.CO2ForestRegressor(C=20000, dual=False,tol = 0.001,max_iter=1000000000,kernel='linear',\
-                                   max_depth=4,n_jobs=10,feature_ratio = 1.0,\
-                                   n_estimators=1)
+krf = co2f.CO2ForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=100000,kernel='linear',\
+                                   max_depth=3,n_jobs=10,feature_ratio = 1.0,\
+                                   n_estimators=100)
 
 lw = 2
 
