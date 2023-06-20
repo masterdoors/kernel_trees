@@ -117,10 +117,10 @@ class RefinedForestRegressor(BaseRefinedForest, RegressorMixin):
                 gamma,criteria,spatial_mul, id_,univariate_ratio,\
                 prune_threshold, verbose)
         self.treeClass = co2.CO2TreeRegressor 
-        self.lrClass = SGDRegressor(alpha=1. / pruneC,
+        self.lr = SGDRegressor(alpha=1. / pruneC,
                                     fit_intercept=False,
                                     max_iter=100)  
-        self.lrClass.decision_function = self.lrClass.predict
+        self.lr.decision_function = self.lr.predict
         
     def predict(self, X):
         return self.predict_proba(X)                                       
