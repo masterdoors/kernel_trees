@@ -161,6 +161,9 @@ class BaseCO2Tree:
                         self.class_map[c] = cc
                         self.class_map_inv[cc] = c                   
                         cc += 1 
+                else:
+                    self.n_classes = 0
+                    self.class_max = 0            
                 
                 if sample_weight == None:
                     sample_weight = ones(shape=(1,x.shape[0]),dtype = int8)
