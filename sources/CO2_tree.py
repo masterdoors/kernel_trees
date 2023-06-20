@@ -162,7 +162,7 @@ class BaseCO2Tree:
                         self.class_map_inv[cc] = c                   
                         cc += 1 
                 else:
-                    self.n_classes = 0
+                    self.n_classes = 1
                     self.class_max = 0     
                     self.class_map = {}    
                     self.class_map_inv ={}   
@@ -212,8 +212,10 @@ class BaseCO2Tree:
     
     def predict(self,x, train_data, preprocess = False):
         probs = self.predict_proba(x, train_data = train_data, preprocess = preprocess)
-        
-        return self.le.inverse_transform(argmax(probs,axis=1))
+        if self.le is not None:
+            return self.le.inverse_transform(argmax(probs,axis=1))
+        else:
+            return probs
    
     
     def predict_proba(self,x, Y = None,train_data = None, preprocess = False, stat_only = False, use_weight = True, return_leaf_id = False):
