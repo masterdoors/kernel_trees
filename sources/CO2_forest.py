@@ -304,4 +304,60 @@ class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
                  gamma,criteria,spatial_mul,id_,univariate_ratio, verbose)
         self.treeClass = co2.CO2TreeRegressor
+        
+    def fit(self,X,y,model=False, sample_weights = None):
+        """
+        Build a forest of trees from the training set (X, y).
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The training input samples. Internally, its dtype will be converted
+            to ``dtype=np.float32``. If a sparse matrix is provided, it will be
+            converted into a sparse ``csc_matrix``.
+        y : array-like of shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels in classification, real numbers in
+            regression).
+        sample_weight : array-like of shape (n_samples,), default=None
+            Sample weights. If None, then samples are equally weighted. Splits
+            that would create child nodes with net zero or negative weight are
+            ignored while searching for a split in each node. In the case of
+            classification, splits are also ignored if they would result in any
+            single class carrying a negative weight in either child node.
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """        
+        X = X.astype(dtype=numpy.float64)
+        self.train_data = X
+        
+        if not model:
+            self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(X,y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
+        else:
+            with open('forest.pickle', 'rb') as f:
+                self.trees = pickle.load(f).trees     
+        
+
+    def predict(self,X,use_weight=True):
+        """
+        Predict class for X.
+        The predicted class of an input sample is a vote by the trees in
+        the forest, weighted by their probability estimates. That is,
+        the predicted class is the one with highest mean probability
+        estimate across the trees.
+        Parameters
+        ----------
+        X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            The input samples. Internally, its dtype will be converted to
+            ``dtype=np.float32``. If a sparse matrix is provided, it will be
+            converted into a sparse ``csr_matrix``.
+        Returns
+        -------
+        y : ndarray of shape (n_samples,) or (n_samples, n_outputs)
+            The predicted classes.
+        """        
+        proba = self.predict_proba(X,avg=None,use_weight=use_weight)   
+            
+        return proba.mean(axis=0)           
+        
 

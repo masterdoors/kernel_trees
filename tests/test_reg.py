@@ -39,9 +39,11 @@ axes[0].scatter(
     label="other training data",
 )
 
+
+krf.fit(X, y)
 axes[1].plot(
     X,
-    krf.fit(X, y).predict(X),
+    krf.predict(X),
     color=model_color[0],
     lw=lw,
     label="{} model".format(kernel_label[0]),
