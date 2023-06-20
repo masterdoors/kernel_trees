@@ -12,8 +12,8 @@ y[::5] += 3 * (0.5 - np.random.rand(8))
 rf = RandomForestRegressor(max_depth=4)
 
 krf = co2f.RefinedForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=100000,kernel='linear',\
-                                   max_depth=3,n_jobs=10,feature_ratio = 1.0,\
-                                   n_estimators=100,prune_threshold=0.1, pruneC=1)
+                                   max_depth=4,n_jobs=10,feature_ratio = 1.0,\
+                                   n_estimators=100,prune_threshold=0.8, pruneC=10.0)
 
 lw = 2
 

@@ -121,7 +121,7 @@ class RefinedForestRegressor(BaseRefinedForest, RegressorMixin):
                 prune_threshold, verbose)
         self.treeClass = co2.CO2TreeRegressor 
         self.lr = SGDRegressor(alpha=1. / pruneC,
-                                    fit_intercept=False,
+                                    fit_intercept=True,
                                     max_iter=100)  
         self.lr.decision_function = self.lr.predict
         
