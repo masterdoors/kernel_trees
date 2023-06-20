@@ -148,17 +148,19 @@ class BaseCO2Tree:
                     Y = self.le.transform(Y)
                 
                 self.n_features = x.shape[1]
-                classes_ = nonzero(bincount(Y))[0]
-                self.n_classes = len(classes_)
-                self.class_max = Y.max()
                 
-                self.class_map = {}#zeros(shape = (self.class_max + 1), dtype = int64)
-                self.class_map_inv ={} #zeros(shape = (self.n_classes), dtype = int64)
-                cc = 0
-                for c in classes_:
-                    self.class_map[c] = cc
-                    self.class_map_inv[cc] = c                   
-                    cc += 1 
+                if Y.dtype == int64 or Y.dtype == int8: 
+                    classes_ = nonzero(bincount(Y))[0]
+                    self.n_classes = len(classes_)
+                    self.class_max = Y.max()
+                    
+                    self.class_map = {}#zeros(shape = (self.class_max + 1), dtype = int64)
+                    self.class_map_inv ={} #zeros(shape = (self.n_classes), dtype = int64)
+                    cc = 0
+                    for c in classes_:
+                        self.class_map[c] = cc
+                        self.class_map_inv[cc] = c                   
+                        cc += 1 
                 
                 if sample_weight == None:
                     sample_weight = ones(shape=(1,x.shape[0]),dtype = int8)
