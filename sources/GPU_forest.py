@@ -86,4 +86,31 @@ class GPUForestRegressor(GPUForest, CO2ForestRegressor):
         super().__init__(C, kernel, max_depth, tol, min_samples_split , \
                  dual,max_iter,min_samples_leaf, n_jobs, n_estimators,sample_ratio,feature_ratio,\
                  gamma,criteria,spatial_mul,id_,univariate_ratio, verbose)
-        self.treeClass = GPUTreeRegressor    
+        self.treeClass = GPUTreeRegressor  
+        
+    def fit(self,X,y):
+        
+        X = X.astype(dtype=numpy.float64)
+        self.train_data = X
+        
+        self.trees = []
+        forest = self
+        for i in range(self.n_estimators):
+            tree = forest.treeClass(C=forest.C , kernel=forest.kernel,\
+            tol=forest.tol, max_iter=forest.max_iter,max_depth = forest.max_depth,\
+            min_samples_split = forest.min_samples_split,dual=forest.dual,\
+            min_samples_leaf = forest.min_samples_leaf, seed = i,\
+            sample_ratio = forest.sample_ratio, feature_ratio = forest.feature_ratio, \
+            gamma=forest.gamma,criteria = forest.criteria)
+
+            tree.fit(X,y, preprocess = False)
+            self.trees.append(tree)    
+    
+    def predict(self,X,use_weight=True):
+        probas = []
+        for tree in self.trees:
+            probas.append(tree.predict_proba(X,None,  train_data =  self.train_data,preprocess = False,stat_only=False,use_weight=use_weight)) 
+
+        proba =  numpy.asarray(probas).mean(axis=0)
+        return proba           
+          
