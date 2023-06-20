@@ -481,8 +481,8 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         if Y_tmp[H > 0].shape[0] == 0:
             return 0.
         
-        self.p0 = Y_tmp[H > 0].mean()
-        self.p1 = Y_tmp[H < 0].mean()
+        self.p0 = Y_tmp[H < 0].mean()
+        self.p1 = Y_tmp[H > 0].mean()
         
         #print (self.p0, self.p1)
         gini_res = self.criteria(Y_tmp.mean(),Y_tmp) - self.criteria(self.p0,Y_tmp[H == 1]) - self.criteria(self.p1,Y_tmp[H == -1])
