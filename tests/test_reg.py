@@ -9,9 +9,9 @@ y = np.sin(X).ravel()
 # add noise to targets
 #y[::5] += 3 * (0.5 - np.random.rand(8))
 
-rf = RandomForestRegressor(max_depth=4, random_state=0)
+rf = RandomForestRegressor(max_depth=4)
 
-krf = co2f.CO2ForestRegressor(C=1, dual=False,tol = 0.0000001,max_iter=1000000,kernel='linear',\
+krf = co2f.CO2ForestRegressor(C=20000, dual=True,tol = 0.001,max_iter=1000000000,kernel='linear',\
                                    max_depth=4,n_jobs=10,feature_ratio = 1.0,\
                                    n_estimators=30)
 
