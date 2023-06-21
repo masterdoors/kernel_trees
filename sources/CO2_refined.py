@@ -62,7 +62,7 @@ class Reinforced:
         to_remove,_,_ = self.prune(self.lr.coef_, n)
         lr_data = self.do_prune(lr_data,to_remove) 
         self.to_remove = to_remove
-        self.lr.fit(lr_data, Y,sample_weigths) 
+        self.lr.fit(lr_data, Y,sample_weigths, verbose = 2) 
         
 class BaseRefinedForest(BaseCO2Forest, Reinforced):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
