@@ -62,7 +62,7 @@ class Reinforced:
         to_remove,_,_ = self.prune(self.lr.coef_, n)
         lr_data = self.do_prune(lr_data,to_remove) 
         self.to_remove = to_remove
-        self.lr.fit(lr_data, Y,sample_weigths, verbose = 2) 
+        self.lr.fit(lr_data, Y,sample_weigths) 
         
 class BaseRefinedForest(BaseCO2Forest, Reinforced):
     def __init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
@@ -122,7 +122,7 @@ class RefinedForestRegressor(BaseRefinedForest, RegressorMixin):
         self.treeClass = co2.CO2TreeRegressor 
         self.lr = SGDRegressor(alpha=1. / pruneC,
                                     fit_intercept=True,
-                                    max_iter=100)  
+                                    max_iter=100,verbose = 2)  
         self.lr.decision_function = self.lr.predict
         
     def predict(self, X):
