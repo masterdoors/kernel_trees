@@ -56,7 +56,8 @@ class Reinforced:
         mm = make_pipeline(MinMaxScaler(), Normalizer())
         mm.fit(lr_data)
 
-        lr_data = mm.transform(lr_data)               
+        lr_data = mm.transform(lr_data)        
+        self.mm = mm       
         self.lr.fit(lr_data, Y) 
 
         to_remove,_,_ = self.prune(self.lr.coef_, n)
@@ -88,6 +89,7 @@ class BaseRefinedForest(BaseCO2Forest, Reinforced):
      
     def predict_proba(self,X, use_weight=False):
         inds = self.getIndicators(X)
+        inds = self.mm.transform(inds)  
         inds = self.do_prune(inds,self.to_remove)
         r = self.lr.decision_function(inds)
         return r
@@ -122,7 +124,7 @@ class RefinedForestRegressor(BaseRefinedForest, RegressorMixin):
         self.treeClass = co2.CO2TreeRegressor 
         self.lr = SGDRegressor(alpha=1. / pruneC,
                                     fit_intercept=True,
-                                    max_iter=100,verbose = 2,tol=0.00001)  
+                                    max_iter=100,verbose = 2,tol=0.001)  
         self.lr.decision_function = self.lr.predict
         
     def predict(self, X):
