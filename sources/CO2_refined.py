@@ -124,7 +124,7 @@ class RefinedForestRegressor(BaseRefinedForest, RegressorMixin):
         self.treeClass = co2.CO2TreeRegressor 
         self.lr = SGDRegressor(alpha=1. / pruneC,
                                     fit_intercept=True,
-                                    max_iter=100,verbose = 2,tol=0.001)  
+                                    max_iter=1000,verbose = 2,tol=0.0001)  
         self.lr.decision_function = self.lr.predict
         
     def predict(self, X):
