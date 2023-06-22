@@ -518,6 +518,7 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
         sizex = None,
         sizey = None,
         padding = None,         
+        parallel = False,
         verbose=1
     ):
         self.n_bins = n_bins
@@ -538,6 +539,7 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
+        self.parallel = parallel
 
         # Utility variables
         self.n_layers_ = 0
@@ -592,7 +594,8 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
                     layer_args["random_state"],
                     layer_args["verbose"],
                     is_classifier(self),
-                    layer_args["global_pool"]
+                    layer_args["global_pool"],
+                    self.parallel 
                 ) 
             else:    
                 # Use customized cascade layers
@@ -606,6 +609,7 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
                     layer_args["random_state"],
                     layer_args["verbose"],
                     is_classifier(self),
+                    self.parallel
                 )
 
         return layer
@@ -883,7 +887,8 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
             print("{} Fitting cascade layer = {:<2}".format(_utils.ctime(), 0))
 
         tic = time.time()
-        X_aug_train_ = layer_.fit_transform(
+        #sample_weight = np.ones(sample_weight.shape)
+        X_aug_train_, sw = layer_.fit_transform(
             X_train_, y, sample_weight=sample_weight
         )
         toc = time.time()
@@ -993,8 +998,8 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
                 print(msg.format(_utils.ctime(), layer_idx))
 
             tic = time.time()
-            X_aug_train_ = layer_.fit_transform(
-                X_middle_train_, y, sample_weight=sample_weight
+            X_aug_train_, sw = layer_.fit_transform(
+                X_middle_train_, y, sample_weight=sw
             )
             toc = time.time()
             training_time = toc - tic
@@ -1459,6 +1464,7 @@ class CascadeForestClassifier(BaseCascadeForest, ClassifierMixin):
         partial_mode=False,
         n_jobs=None,
         random_state=None,
+        parallel=False,
         verbose=1,
     ):
         super().__init__(
@@ -1481,6 +1487,7 @@ class CascadeForestClassifier(BaseCascadeForest, ClassifierMixin):
             partial_mode=partial_mode,
             n_jobs=n_jobs,
             random_state=random_state,
+            parallel=parallel,
             verbose=verbose,
         )
 
@@ -1677,6 +1684,7 @@ class CascadeForestRegressor(BaseCascadeForest, RegressorMixin):
         partial_mode=False,
         n_jobs=None,
         random_state=None,
+        parallel=False,
         verbose=1,
     ):
         super().__init__(
@@ -1699,6 +1707,7 @@ class CascadeForestRegressor(BaseCascadeForest, RegressorMixin):
             partial_mode=partial_mode,
             n_jobs=n_jobs,
             random_state=random_state,
+            parallel=parallel,
             verbose=verbose,
         )
 
