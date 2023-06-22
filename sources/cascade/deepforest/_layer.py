@@ -14,11 +14,14 @@ from sklearn.base import is_classifier
 from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 
+# +
 from . import _utils
 from ._estimator import Estimator
 from .utils.kfoldwrapper import KFoldWrapper
 from .utils.imagescanner import ImageScanner
 
+#from scipy.spatial.distance import euclidean
+# -
 
 def _build_estimator(
     X,
@@ -40,6 +43,11 @@ def _build_estimator(
         print(msg.format(_utils.ctime(), key, layer_idx))
 
     X_aug_train = estimator.fit_transform(X, y, sample_weight)
+    
+    one_hot = np.zeros((X.shape[0],np.unique(y).shape[0]))
+    one_hot[:,np.argmax(X_aug_train, axis = 1)] = 1.
+            
+    sw = np.linalg.norm(X_aug_train - one_hot,axis = 1)    
     oob_decision_function += estimator.oob_decision_function_
 
     if partial_mode:
@@ -49,7 +57,7 @@ def _build_estimator(
         )
         return X_aug_train, buffer_path
     else:
-        return X_aug_train, estimator
+        return X_aug_train, estimator, sw
 
 
 class BaseCascadeLayer(BaseEstimator):
@@ -228,7 +236,7 @@ class ClassificationCascadeLayer(BaseCascadeLayer, ClassifierMixin):
             self.estimators_.update({key: _estimator})
 
         for estimator_idx in range(self.n_estimators // 2):
-            X_aug_, _estimator = _build_estimator(
+            X_aug_, _estimator, sw = _build_estimator(
                 X,
                 y,
                 self.layer_idx,
@@ -253,7 +261,7 @@ class ClassificationCascadeLayer(BaseCascadeLayer, ClassifierMixin):
         )
 
         X_aug = np.hstack(X_aug)
-        return X_aug
+        return X_aug, sw.mean()
 
 
 class RegressionCascadeLayer(BaseCascadeLayer, RegressorMixin):
@@ -363,6 +371,7 @@ class CustomCascadeLayer(object):
         random_state=None,
         verbose=1,
         is_classifier=True,
+        parallel=False
     ):
         self.layer_idx = layer_idx
         self.n_splits = n_splits
@@ -374,13 +383,14 @@ class CustomCascadeLayer(object):
         self.random_state = random_state
         self.verbose = verbose
         self.is_classifier = is_classifier
+        self.parallel = parallel
         # Internal container
         self.estimators_ = {}
 
     def fit_transform(self, X, y, sample_weight=None):
         n_samples, _ = X.shape
         X_aug = []
-
+        Sw = [] 
         # Parameters were already validated by upstream methods
         for estimator_idx, estimator in enumerate(self.dummy_estimators_):
             kfold_estimator = KFoldWrapper(
@@ -389,7 +399,8 @@ class CustomCascadeLayer(object):
                 self.n_outputs,
                 self.random_state,
                 self.verbose,
-                self.is_classifier,
+                self.is_classifier, 
+                self.parallel
             )
 
             if self.verbose > 1:
@@ -400,6 +411,13 @@ class CustomCascadeLayer(object):
 
             kfold_estimator.fit_transform(X, y, sample_weight)
             X_aug.append(kfold_estimator.oob_decision_function_)
+            
+            one_hot = np.zeros((X.shape[0],np.unique(y).shape[0]))
+            one_hot[:,np.argmax(X_aug[len(X_aug) - 1], axis = 1)] = 1.
+
+            sw = np.linalg.norm(X_aug[len(X_aug) - 1] - one_hot, axis = 1)
+    
+            Sw.append(sw)
             key = "{}-{}-custom".format(self.layer_idx, estimator_idx)
 
             if self.partial_mode:
@@ -430,7 +448,7 @@ class CustomCascadeLayer(object):
             )
 
         X_aug = np.hstack(X_aug)
-        return X_aug
+        return X_aug, np.asarray(Sw).mean(axis = 0)
 
     def transform(self, X):
         """Preserved for the naming consistency."""
@@ -452,7 +470,7 @@ class CustomCascadeLayer(object):
             pred[:, left:right] += estimator.predict(X)
 
         return pred
-    
+
 class WinCascadeLayer(CustomCascadeLayer):
     def __init__(self,
         layer_idx,
@@ -473,7 +491,9 @@ class WinCascadeLayer(CustomCascadeLayer):
         global_pool = True):
         self.sizex = sizex
         self.sizey = sizey
-        super().__init__(layer_idx,n_splits,n_outputs,estimators,partial_mode,buffer,random_state,verbose,is_classifier)
+        self.parallel = False
+
+        super().__init__(layer_idx,n_splits,n_outputs,estimators,partial_mode,buffer,random_state,verbose,is_classifier,self.parallel)
         self.scanner = ImageScanner(kernel_size,stride,padding)
         
         self.global_pool = global_pool
