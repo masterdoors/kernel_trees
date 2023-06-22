@@ -11,6 +11,22 @@ from sklearn.model_selection import KFold
 
 from .. import _utils
 
+from joblib import Parallel, delayed
+
+def kfoldtrain(k,X,y,train_idx, dummy_estimator_,sample_weight):
+    estimator = copy.deepcopy(dummy_estimator_)
+
+    # Fit on training samples
+    if sample_weight is None:
+        # Notice that a bunch of base estimators do not take
+        # `sample_weight` as a valid input.
+        estimator.fit(X[train_idx], y[train_idx])
+    else:
+        estimator.fit(
+            X[train_idx], y[train_idx], sample_weight[train_idx]
+        )
+
+    return k,estimator
 
 class KFoldWrapper(object):
     """
@@ -26,6 +42,7 @@ class KFoldWrapper(object):
         random_state=None,
         verbose=1,
         is_classifier=True,
+        parallel=False
     ):
 
         # Parameters were already validated by upstream methods
@@ -37,6 +54,7 @@ class KFoldWrapper(object):
         self.is_classifier = is_classifier
         # Internal container
         self.estimators_ = []
+        self.parallel = parallel
 
     @property
     def estimator_(self):
@@ -52,38 +70,57 @@ class KFoldWrapper(object):
         )
         self.oob_decision_function_ = np.zeros((n_samples, self.n_outputs))
 
-        for k, (train_idx, val_idx) in enumerate(splitter.split(X, y)):
-            estimator = copy.deepcopy(self.dummy_estimator_)
+        if self.parallel:
+            train_data = [(i,e) for i,e in  enumerate(splitter.split(X, y))]
+            res = dict(Parallel(n_jobs=self.n_splits,backend="loky")(delayed(kfoldtrain)(k,X,y,train_idx, self.dummy_estimator_,sample_weight)  for k, (train_idx, val_idx) in train_data))
+            for k, (train_idx, val_idx) in train_data:
+                estimator = res[k]
+                # Predict on hold-out samples
+                if self.is_classifier:
+                    self.oob_decision_function_[
+                        val_idx
+                    ] += estimator.predict_proba(X[val_idx])
+                else:
+                    val_pred = estimator.predict(X[val_idx])
 
-            if self.verbose > 1:
-                msg = "{} - - Fitting the base estimator with fold = {}"
-                print(msg.format(_utils.ctime(), k))
+                    # Reshape for univariate regression
+                    if self.n_outputs == 1 and len(val_pred.shape) == 1:
+                        val_pred = np.expand_dims(val_pred, 1)
+                    self.oob_decision_function_[val_idx] += val_pred
+            self.estimators_ = list(res.values())
+        else:
+            for k, (train_idx, val_idx) in enumerate(splitter.split(X, y)):
+                estimator = copy.deepcopy(self.dummy_estimator_)
 
-            # Fit on training samples
-            if sample_weight is None:
-                # Notice that a bunch of base estimators do not take
-                # `sample_weight` as a valid input.
-                estimator.fit(X[train_idx], y[train_idx])
-            else:
-                estimator.fit(
-                    X[train_idx], y[train_idx], sample_weight[train_idx]
-                )
+                if self.verbose > 1:
+                    msg = "{} - - Fitting the base estimator with fold = {}"
+                    print(msg.format(_utils.ctime(), k))
 
-            # Predict on hold-out samples
-            if self.is_classifier:
-                self.oob_decision_function_[
-                    val_idx
-                ] += estimator.predict_proba(X[val_idx])
-            else:
-                val_pred = estimator.predict(X[val_idx])
+                # Fit on training samples
+                if sample_weight is None:
+                    # Notice that a bunch of base estimators do not take
+                    # `sample_weight` as a valid input.
+                    estimator.fit(X[train_idx], y[train_idx])
+                else:
+                    estimator.fit(
+                        X[train_idx], y[train_idx], sample_weight[train_idx]
+                    )
 
-                # Reshape for univariate regression
-                if self.n_outputs == 1 and len(val_pred.shape) == 1:
-                    val_pred = np.expand_dims(val_pred, 1)
-                self.oob_decision_function_[val_idx] += val_pred
+                # Predict on hold-out samples
+                if self.is_classifier:
+                    self.oob_decision_function_[
+                        val_idx
+                    ] += estimator.predict_proba(X[val_idx])
+                else:
+                    val_pred = estimator.predict(X[val_idx])
 
-            # Store the estimator
-            self.estimators_.append(estimator)
+                    # Reshape for univariate regression
+                    if self.n_outputs == 1 and len(val_pred.shape) == 1:
+                        val_pred = np.expand_dims(val_pred, 1)
+                    self.oob_decision_function_[val_idx] += val_pred
+
+                # Store the estimator
+                self.estimators_.append(estimator)
 
         return self.oob_decision_function_
 
