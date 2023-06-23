@@ -477,7 +477,7 @@ class BaseDecisionStampRegressor(BaseDecisionStamp, RegressorMixin):
         return H, deltas   
     
     def estimateOutput(self, x,Y_tmp):
-        H = self.stamp_sign(x[self.sample_weight],x,sample = False)
+        H = self.stamp_sign(x[self.sample_weight][:, self.features_weight],x,sample = False)
         if Y_tmp[H > 0].shape[0] == 0:
             return 0.
         

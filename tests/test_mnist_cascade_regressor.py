@@ -13,7 +13,7 @@ y[::5] += 3 * (0.5 - np.random.rand(8))
 rf = RandomForestRegressor(max_depth=4)
 
 est = [co2f.CO2ForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=100000,kernel='linear',\
-                                   max_depth=3,n_jobs=10,feature_ratio = 1.0,\
+                                   max_depth=3,n_jobs=10,feature_ratio = 0.5,\
                                    n_estimators=100) for i in range(int(2))]
 
 model = CascadeForestRegressor(max_layers=3)
