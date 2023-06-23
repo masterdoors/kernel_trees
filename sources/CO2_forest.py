@@ -327,13 +327,8 @@ class CO2ForestRegressor(BaseCO2Forest, RegressorMixin):
         X = X.astype(dtype=numpy.float64)
         self.train_data = X
         
-        if not model:
-            self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(X,y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
-        else:
-            with open('forest.pickle', 'rb') as f:
-                self.trees = pickle.load(f).trees     
+        self.trees = Parallel(n_jobs=self.n_jobs,backend="threading",require="sharedmem")(delayed(fitter)(X,y,self,i+(self.id_*self.n_estimators + 1)) for i in range(self.n_estimators))            
         
-
     def predict(self,X,use_weight=True):
         """
         Predict class for X.

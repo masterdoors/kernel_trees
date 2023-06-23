@@ -929,19 +929,19 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
             X_middle_train_ = _utils.init_array(X_train_, X_aug_train_.shape[1])         
 
             # Set the binner
-            binner_ = Binner(
-                n_bins=self.n_bins,
-                bin_subsample=self.bin_subsample,
-                bin_type=self.bin_type,
-                random_state=self.random_state,
-            )
+            #binner_ = Binner(
+            #    n_bins=self.n_bins,
+            #    bin_subsample=self.bin_subsample,
+            #    bin_type=self.bin_type,
+            #    random_state=self.random_state,
+            #)
 
-            X_binned_aug_train_ = self._bin_data(
-                binner_, X_aug_train_, is_training_data=True
-            )
+            #X_binned_aug_train_ = self._bin_data(
+            #    binner_, X_aug_train_, is_training_data=True
+            #)
 
             X_middle_train_ = _utils.merge_array(
-                X_middle_train_, X_binned_aug_train_, self.n_features_
+                X_middle_train_, X_aug_train_, self.n_features_
             )
 
             # Build a cascade layer
@@ -1101,19 +1101,19 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
                     msg = "Missing predictor after calling `set_predictor`"
                     raise RuntimeError(msg)
 
-            binner_ = Binner(
-                n_bins=self.n_bins,
-                bin_subsample=self.bin_subsample,
-                bin_type=self.bin_type,
-                random_state=self.random_state,
-            )
+            #binner_ = Binner(
+            #    n_bins=self.n_bins,
+            #    bin_subsample=self.bin_subsample,
+            #    bin_type=self.bin_type,
+            #    random_state=self.random_state,
+            #)
 
-            X_binned_aug_train_ = self._bin_data(
-                binner_, snapshot_X_aug_train_, is_training_data=True
-            )
+            #X_binned_aug_train_ = self._bin_data(
+            #    binner_, snapshot_X_aug_train_, is_training_data=True
+            #)
 
             X_middle_train_ = _utils.merge_array(
-                X_middle_train_, X_binned_aug_train_, self.n_features_
+                X_middle_train_, snapshot_X_aug_train_, self.n_features_
             )
 
             if self.verbose > 0:
@@ -1589,10 +1589,10 @@ class CascadeForestClassifier(BaseCascadeForest, ClassifierMixin):
                 X_aug_test_ = layer.transform(X_test)
             elif layer_idx < self.n_layers_ - 1:
                 X_middle_test_ = _utils.init_array(X_test, X_aug_test_.shape[1])
-                binner_ = self._get_binner(layer_idx)
-                X_aug_test_ = self._bin_data(
-                    binner_, X_aug_test_, is_training_data=False
-                )
+                #binner_ = self._get_binner(layer_idx)
+                #X_aug_test_ = self._bin_data(
+                #    binner_, X_aug_test_, is_training_data=False
+                #)
                 X_middle_test_ = _utils.merge_array(
                     X_middle_test_, X_aug_test_, self.n_features_
                 )
@@ -1600,10 +1600,10 @@ class CascadeForestClassifier(BaseCascadeForest, ClassifierMixin):
             else:
                 X_middle_test_ = _utils.init_array(X_test, X_aug_test_.shape[1])
                 
-                binner_ = self._get_binner(layer_idx)
-                X_aug_test_ = self._bin_data(
-                    binner_, X_aug_test_, is_training_data=False
-                )
+                #binner_ = self._get_binner(layer_idx)
+                #X_aug_test_ = self._bin_data(
+                #    binner_, X_aug_test_, is_training_data=False
+                #)
                 X_middle_test_ = _utils.merge_array(
                     X_middle_test_, X_aug_test_, self.n_features_
                 )
@@ -1617,10 +1617,10 @@ class CascadeForestClassifier(BaseCascadeForest, ClassifierMixin):
             if self.verbose > 0:
                 print("{} Evaluating the predictor".format(_utils.ctime()))
 
-            binner_ = self._get_binner(self.n_layers_)
-            X_aug_test_ = self._bin_data(
-                binner_, X_aug_test_, is_training_data=False
-            )
+            #binner_ = self._get_binner(self.n_layers_)
+            #X_aug_test_ = self._bin_data(
+            #    binner_, X_aug_test_, is_training_data=False
+            #)
             X_middle_test_ = _utils.merge_array(
                 X_middle_test_, X_aug_test_, self.n_features_
             )
@@ -1794,8 +1794,8 @@ class CascadeForestRegressor(BaseCascadeForest, RegressorMixin):
         if self.verbose > 0:
             print("{} Start to evalute the model:".format(_utils.ctime()))
 
-        binner_ = self._get_binner(0)
-        X_test = self._bin_data(binner_, X, is_training_data=False)
+        #binner_ = self._get_binner(0)
+        X_test = X #self._bin_data(binner_, X, is_training_data=False)
         X_middle_test_ = _utils.init_array(X_test, self.n_aug_features_)
 
         for layer_idx in range(self.n_layers_):
@@ -1808,19 +1808,19 @@ class CascadeForestRegressor(BaseCascadeForest, RegressorMixin):
             if layer_idx == 0:
                 X_aug_test_ = layer.transform(X_test)
             elif layer_idx < self.n_layers_ - 1:
-                binner_ = self._get_binner(layer_idx)
-                X_aug_test_ = self._bin_data(
-                    binner_, X_aug_test_, is_training_data=False
-                )
+                #binner_ = self._get_binner(layer_idx)
+                #X_aug_test_ = self._bin_data(
+                #    binner_, X_aug_test_, is_training_data=False
+                #)
                 X_middle_test_ = _utils.merge_array(
                     X_middle_test_, X_aug_test_, self.n_features_
                 )
                 X_aug_test_ = layer.transform(X_middle_test_)
             else:
-                binner_ = self._get_binner(layer_idx)
-                X_aug_test_ = self._bin_data(
-                    binner_, X_aug_test_, is_training_data=False
-                )
+                #binner_ = self._get_binner(layer_idx)
+                #X_aug_test_ = self._bin_data(
+                #    binner_, X_aug_test_, is_training_data=False
+                #)
                 X_middle_test_ = _utils.merge_array(
                     X_middle_test_, X_aug_test_, self.n_features_
                 )
@@ -1834,10 +1834,10 @@ class CascadeForestRegressor(BaseCascadeForest, RegressorMixin):
             if self.verbose > 0:
                 print("{} Evaluating the predictor".format(_utils.ctime()))
 
-            binner_ = self._get_binner(self.n_layers_)
-            X_aug_test_ = self._bin_data(
-                binner_, X_aug_test_, is_training_data=False
-            )
+            #binner_ = self._get_binner(self.n_layers_)
+            #X_aug_test_ = self._bin_data(
+            #    binner_, X_aug_test_, is_training_data=False
+            #)
             X_middle_test_ = _utils.merge_array(
                 X_middle_test_, X_aug_test_, self.n_features_
             )

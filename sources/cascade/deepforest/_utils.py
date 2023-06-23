@@ -46,10 +46,6 @@ def merge_array(X_middle, X_aug, n_features):
     Update the array created by `init_array`  with additional checks on the
     layout."""
 
-    if X_aug.dtype != np.uint8:
-        msg = "The input `X_aug` when merging the array should be binned."
-        raise ValueError(msg)
-
     assert X_middle.shape[0] == X_aug.shape[0]  # check n_samples
     assert X_middle.shape[1] == n_features + X_aug.shape[1]  # check n_features
     X_middle[:, n_features:] = X_aug
