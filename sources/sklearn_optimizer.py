@@ -68,7 +68,7 @@ class SKLearnOptimizer:
             
             self.features_weight = rng.permutation(pos_idx)[:fw_size]#.astype(int8)
             
-            if self.feature_weight.shape[0] == 0:
+            if self.features_weight.shape[0] == 0:
                 return 0.
 
             self.sample_weight = sample_idx_ran 
