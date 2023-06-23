@@ -63,11 +63,11 @@ class SKLearnOptimizer:
                 if fw_size > pos_idx.shape[0]:
                     fw_size = pos_idx.shape[0]
                 #fw_size = int(pos_idx.shape[0] * self.feature_ratio)
-
+            if fw_size == 0:
+                fw_size = 1
+            
             self.features_weight = rng.permutation(pos_idx)[:fw_size]#.astype(int8)
 
-            if fw_size == 0:
-                return 0.
             self.sample_weight = sample_idx_ran 
 
             H, deltas = self.setupSlackRescaling(Y_tmp)

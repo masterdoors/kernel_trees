@@ -35,7 +35,7 @@ def init_array(X, n_aug_features):
     # Create the global array that stores both X and X_aug
     n_samples, n_features = X.shape
     n_dims = n_features + n_aug_features
-    X_middle = np.zeros((n_samples, n_dims)) #, dtype=np.uint8)
+    X_middle = np.zeros((n_samples, n_dims), dtype=X.dtype)
     X_middle[:, :n_features] += X
 
     return X_middle

@@ -999,7 +999,7 @@ class BaseCascadeForest(BaseEstimator, metaclass=ABCMeta):
 
             tic = time.time()
             X_aug_train_, sw = layer_.fit_transform(
-                X_middle_train_, y, sample_weight=sw
+                X_middle_train_, y, sample_weight=sample_weight #sw
             )
             toc = time.time()
             training_time = toc - tic
