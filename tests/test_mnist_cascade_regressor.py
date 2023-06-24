@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 import CO2_forest as co2f
+import CO2_refined as co2f_re
 from deepforest import CascadeForestRegressor
 import matplotlib.pyplot as plt
 
@@ -21,10 +22,10 @@ model.set_estimator(est)
 
 lw = 2
 
-kernel_label = ["RF", "Cascade KRF"]
+kernel_label = ["RF", "Cascade KRF","Reg Cascade KRF"]
 model_color = ["m", "c", "g"]
 
-fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(15, 10), sharey=True)
+fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(15, 10), sharey=True)
 
 axes[0].plot(
     X,
@@ -54,6 +55,32 @@ axes[1].plot(
 )
 
 axes[1].scatter(
+    X,
+    y,
+    facecolor="none",
+    edgecolor="k",
+    s=50,
+    label="other training data",
+)
+
+est = [co2f_re.RefinedForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=1000000,kernel='linear',\
+                                   max_depth=3,n_jobs=10,feature_ratio = 0.5,\
+                                   n_estimators=100, prune_threshold=0.1, pruneC=10000.0) for i in range(int(2))]
+                                
+model = CascadeForestRegressor(max_layers=3)
+model.set_estimator(est)  
+
+
+model.fit(X, y)
+axes[2].plot(
+    X,
+    model.predict(X),
+    color=model_color[0],
+    lw=lw,
+    label="{} model".format(kernel_label[0]),
+)
+
+axes[2].scatter(
     X,
     y,
     facecolor="none",
