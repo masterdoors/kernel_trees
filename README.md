@@ -26,6 +26,7 @@ tests - files and notebooks to run various experiments.
 thirdparty - files to patch Scikit-learn (deprecated).
 
 <a name="dependences"/>
+
 # Dependences:
 (One can use pip to install all of them)
 1. Python 3.8.16
@@ -41,6 +42,7 @@ thirdparty - files to patch Scikit-learn (deprecated).
 6. Fork of the scikit-learn 0.22 (use pip install git+https://github.com/masterdoors/scikit-learn to install). 
 
 <a name="installation"/>
+
 # Installation:
 ## Kernel Forests
 pip install git+https://github.com/masterdoors/kernel_trees.git
@@ -52,8 +54,10 @@ pip install git+https://github.com/masterdoors/kernel_trees.git
 2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
 
 <a name="examples"/>
+
 # Examples
 <a name="basic-usage"/>
+
 ## Basic usage:
 ```python
 from sklearn import datasets, metrics
@@ -150,6 +154,7 @@ print(
 )
 ```
 <a name="refined-forest"/>
+
 ## Refined Forest:
 Refined Kernel forest based on the method from the paper:
 
@@ -253,6 +258,7 @@ print(
 )
 ```
 <a name="cascade-forest-regressors"/>
+
 ## Cascade Forest Regressors:
 Cascade Forest is presented in the paper:
 
