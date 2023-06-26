@@ -2,11 +2,12 @@
 Bagging on kernel trees
 
 ## Table of Contents:
-- [Dependences](#dependences:)
-- [Installation](#installation:)
-- [Basic usage](#basic-usage:)
-- [Refined Forest](#refined-forest:)
-- [Cascade Forest Regressors](#cascade-forest0-regressors:)
+- [Dependences](#dependences)
+- [Installation](#installation)
+- [Examples](#examples)
+    - [Basic usage](#basic-usage)
+    - [Refined Forest](#refined-forest)
+    - [Cascade Forest Regressors](#cascade-forest-regressors)
 
 ## Code structure:
 
@@ -24,6 +25,7 @@ tests - files and notebooks to run various experiments.
 
 thirdparty - files to patch Scikit-learn (deprecated).
 
+<a name="dependences"/>
 # Dependences:
 (One can use pip to install all of them)
 1. Python 3.8.16
@@ -38,6 +40,7 @@ thirdparty - files to patch Scikit-learn (deprecated).
 
 6. Fork of the scikit-learn 0.22 (use pip install git+https://github.com/masterdoors/scikit-learn to install). 
 
+<a name="installation"/>
 # Installation:
 ## Kernel Forests
 pip install git+https://github.com/masterdoors/kernel_trees.git
@@ -48,7 +51,10 @@ pip install git+https://github.com/masterdoors/kernel_trees.git
 1. Go to sources/cascade. Run setup.py install
 2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
 
-# Basic usage:
+<a name="examples"/>
+# Examples
+<a name="basic-usage"/>
+## Basic usage:
 ```python
 from sklearn import datasets, metrics
 
@@ -143,8 +149,8 @@ print(
     f"{metrics.classification_report(Y_validate, Y_v)}\n"
 )
 ```
-
-# Refined Forest:
+<a name="refined-forest"/>
+## Refined Forest:
 Refined Kernel forest based on the method from the paper:
 
 *Ren, S., Cao, X., Wei, Y., & Sun, J. (2015). Global refinement of random forest. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (pp. 723-730).*
@@ -246,8 +252,8 @@ print(
     f"{metrics.classification_report(Y_validate, Y_v)}\n"
 )
 ```
-
-# Cascade Forest Regressors:
+<a name="cascade-forest-regressors"/>
+## Cascade Forest Regressors:
 Cascade Forest is presented in the paper:
 
 *Zhou, Z. H., & Feng, J. (2017, August). Deep Forest: Towards An Alternative to Deep Neural Networks. In IJCAI (pp. 3553-3559).*
