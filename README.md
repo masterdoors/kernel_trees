@@ -23,8 +23,6 @@ sources - source files:
 
 tests - files and notebooks to run various experiments.
 
-thirdparty - files to patch Scikit-learn (deprecated).
-
 <a name="dependences"/>
 
 # Dependences:
