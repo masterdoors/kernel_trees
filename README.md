@@ -48,7 +48,7 @@ pip install git+https://github.com/masterdoors/kernel_trees.git
 1. Install the fork of ThunderSVM (It supports sample_weights): https://github.com/masterdoors/thundersvm
 2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
 ## Cascade Forests
-1. Go to sources/cascade. Run setup.py install
+1. Go to sources/cascade. Run setup.py install (Note that the Cascade Forest has its own licence, read it beforehead)
 2. Install Kernel Forests: pip install git+https://github.com/masterdoors/kernel_trees.git
 
 <a name="examples"/>
@@ -262,11 +262,14 @@ Cascade Forest is presented in the paper:
 
 *Zhou, Z. H., & Feng, J. (2017, August). Deep Forest: Towards An Alternative to Deep Neural Networks. In IJCAI (pp. 3553-3559).*
 
+We use a modification of the implementation from <a name="Deep Forest" href="https://github.com/LAMDA-NJU/Deep-Forest">. 
+
 A combination of the Cascade forest, Kernel forest, and Forest Refinement is tested in:
 
 *Devyatkin, D. A. (2023). Estimation of vegetation indices with Random Kernel Forests. IEEE Access, 11, 29500-29509.*
 
 The code below is a toy-dataset example of Deep Forest Cascade Regression with different basic ensembles: Random Forests, Kernel Forests, and Refined Kernel Forest (The original toy dataset generation code is borrowed from Scikit-Learn).
+
 ```python
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
