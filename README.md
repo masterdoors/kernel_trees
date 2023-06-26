@@ -262,7 +262,7 @@ Cascade Forest is presented in the paper:
 
 *Zhou, Z. H., & Feng, J. (2017, August). Deep Forest: Towards An Alternative to Deep Neural Networks. In IJCAI (pp. 3553-3559).*
 
-We use a modification of the implementation from <a name="Deep Forest" href="https://github.com/LAMDA-NJU/Deep-Forest">. 
+We use a modification of the implementation from [Deep Forest](https://github.com/LAMDA-NJU/Deep-Forest). 
 
 A combination of the Cascade forest, Kernel forest, and Forest Refinement is tested in:
 
