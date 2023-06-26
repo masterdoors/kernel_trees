@@ -1,5 +1,5 @@
 # kernel_trees
-Bagging on kernel trees
+Bagging on kernel trees. See: *Devyatkin, D. A., & Grigoriev, O. G. (2022). Random Kernel Forests. IEEE Access, 10, 77962-77979.*.
 
 ## Table of Contents:
 - [Dependences](#dependences)
