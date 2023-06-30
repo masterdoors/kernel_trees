@@ -59,113 +59,114 @@ pip install git+https://github.com/masterdoors/kernel_trees.git
 Class CO2_forest.CO2ForestClassifier - Kernel Forest classifier
 
 Methods:
-__init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+*\__init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,verbose=0)
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,verbose=0)*
 
-C - Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive and pretty large comparing to SVM (1000 and greather).
+*C* - Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive and pretty large comparing to SVM (1000 and greather).
 
-kernel - {linear, polynomial, gaussian, univariate}. Specifies the kernel type to train decision stamps. The 'univariate' means the standard axis-parallel splitter.
+*kernel* - {linear, polynomial, gaussian, univariate}. Specifies the kernel type to train decision stamps. The 'univariate' means the standard axis-parallel splitter.
 
-max_depth - The maximum depth of the tree.
+*max_depth* - The maximum depth of the tree.
 
-tol - Tolerance for stopping criterion.
+*tol* - Tolerance for stopping criterion.
 
-min_samples_split - The minimum number of samples required to split an internal node.
+*min_samples_split* - The minimum number of samples required to split an internal node.
 
-dual - Select the algorithm to either solve the dual or primal optimization problem (for the 'linear' kernel only). 
+*dual* - Select the algorithm to either solve the dual or primal optimization problem (for the 'linear' kernel only). 
 
-max_iter - Hard limit on iterations within solver, or -1 for no limit.
+*max_iter* - Hard limit on iterations within solver, or -1 for no limit.
 
-min_samples_leaf - The minimum number of samples required to be at a leaf node. A split point at any depth will only be considered if it leaves at least min_samples_leaf training samples in each of the left and right branches. 
+*min_samples_leaf* - The minimum number of samples required to be at a leaf node. A split point at any depth will only be considered if it leaves at least min_samples_leaf training samples in each of the left and right branches. 
 
-n_jobs - The number of jobs to run in parallel. fit, predict, decision_path and apply are all parallelized over the trees. 
+*n_jobs* - The number of jobs to run in parallel. fit, predict, decision_path and apply are all parallelized over the trees. 
 
-n_estimators - The number of trees in the forest. 
+*n_estimators* - The number of trees in the forest. 
 
-sample_ratio
+*sample_ratio* - The number of training samples to consider when looking for the best split. sample_ratio is a fraction *[0..1]*. 
 
-feature_ratio - The number of features to consider when looking for the best split. feature_ratio is a fraction and max(1, int(max_features * n_features_in_)) features are considered at each split.
+*feature_ratio* - The number of features to consider when looking for the best split. feature_ratio is a fraction *[0..1]*.
 
-gamma - Kernel coefficient for gaussian kernel. Must be non-negative.
+*gamma* - Kernel coefficient for gaussian kernel. Must be non-negative.
 
-criteria - {gini, gain}. The function to measure the quality of a split. 
+*criteria* - {gini, gain}. The function to measure the quality of a split. 
 
-spatial_mul
+*spatial_mul*
 
-univariate_ratio
+*univariate_ratio*. Fraction of univariate trees in the ensemble *[0..1]*.
 
-id_
+*id_* - deprecated.
 
-verbose - Enable verbose output. 
+*verbose* - Enable verbose output. 
 
-fit(self,X,y)
+*fit(self,X,y)*
 
-X - The training input samples (dense or sparse matrix). 
-y - The target values
+*X* - The training input samples (dense or sparse matrix). 
+*y* - The target values
 
-predict(X)
+*predict(X)*
 
-X - The input samples. 
+*X* - The input samples. 
 
-predict_proba(self,X,avg='macro')
+*predict_proba(self,X,avg='macro')*
 
-X - The input samples.
+*X* - The input samples.
 
-avg - {macro, None}. Defines if the method should return mean probability.
+*avg* - {macro, None}. Defines if the method should return mean probability.
 
 Class CO2_forest.CO2ForestRegressor - Kernel Forest regressor
 
-_init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+*\__init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0)
+                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0)*
 
-C - Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive and pretty large comparing to SVM (1000 and greather).
+*C* - Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive and pretty large comparing to SVM (1000 and greather).
 
-kernel - {linear, polynomial, gaussian, univariate}. Specifies the kernel type to train decision stamps. The 'univariate' means the standard axis-parallel splitter.
+*kernel* - {linear, polynomial, gaussian, univariate}. Specifies the kernel type to train decision stamps. The 'univariate' means the standard axis-parallel splitter.
 
-max_depth - The maximum depth of the tree.
+*max_depth* - The maximum depth of the tree.
 
-tol - Tolerance for stopping criterion.
+*tol* - Tolerance for stopping criterion.
 
-min_samples_split - The minimum number of samples required to split an internal node.
+*min_samples_split* - The minimum number of samples required to split an internal node.
 
-dual - Select the algorithm to either solve the dual or primal optimization problem (for the 'linear' kernel only). 
+*dual* - Select the algorithm to either solve the dual or primal optimization problem (for the 'linear' kernel only). 
 
-max_iter - Hard limit on iterations within solver, or -1 for no limit.
+*max_iter* - Hard limit on iterations within solver, or -1 for no limit.
 
-min_samples_leaf - The minimum number of samples required to be at a leaf node. A split point at any depth will only be considered if it leaves at least min_samples_leaf training samples in each of the left and right branches. 
+*min_samples_leaf* - The minimum number of samples required to be at a leaf node. A split point at any depth will only be considered if it leaves at least min_samples_leaf training samples in each of the left and right branches. 
 
-n_jobs - The number of jobs to run in parallel. fit, predict, decision_path and apply are all parallelized over the trees. 
+*n_jobs* - The number of jobs to run in parallel. fit, predict, decision_path and apply are all parallelized over the trees. 
 
-n_estimators - The number of trees in the forest. 
+*n_estimators* - The number of trees in the forest. 
 
-sample_ratio
+*sample_ratio*
 
-feature_ratio - The number of features to consider when looking for the best split. feature_ratio is a fraction and max(1, int(max_features * n_features_in_)) features are considered at each split.
+*feature_ratio* - The number of features to consider when looking for the best split. feature_ratio is a fraction and max(1, int(max_features * n_features_in_)) features are considered at each split.
 
-gamma - Kernel coefficient for gaussian kernel. Must be non-negative.
+*gamma* - Kernel coefficient for gaussian kernel. Must be non-negative.
 
-criteria - {mse}. The function to measure the quality of a split (mean squared error is the only option now). 
+*criteria* - {mse}. The function to measure the quality of a split (mean squared error is the only option now). 
 
-spatial_mul
+*spatial_mul*
 
-univariate_ratio
+*univariate_ratio*
 
-id_
+*id_* - deprecated
 
-verbose - Enable verbose output. 
+*verbose* - Enable verbose output. 
 
-fit(self,X,y)
+*fit(self,X,y)*
 
-X - The training input samples (dense or sparse matrix). 
-y - The target values
+*X* - The training input samples (dense or sparse matrix). 
 
-predict(self,X)
+*y* - The target values
 
-X - The input samples. 
+*predict(self,X)*
+
+*X* - The input samples. 
 
 ## Refined Kernel Forest classifier and Regressor
 
