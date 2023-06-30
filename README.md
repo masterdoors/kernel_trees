@@ -96,7 +96,7 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 *spatial_mul*
 
-*univariate_ratio*. Fraction of univariate trees in the ensemble *[0..1]*.
+*univariate_ratio*.  - Fraction of univariate trees in the ensemble *[0..1]*.
 
 *id_* - deprecated.
 
@@ -145,7 +145,7 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 *n_estimators* - The number of trees in the forest. 
 
-*sample_ratio*
+*sample_ratio*- The number of training samples to consider when looking for the best split. sample_ratio is a fraction *[0..1]*. 
 
 *feature_ratio* - The number of features to consider when looking for the best split. feature_ratio is a fraction and max(1, int(max_features * n_features_in_)) features are considered at each split.
 
@@ -155,7 +155,7 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 *spatial_mul*
 
-*univariate_ratio*
+*univariate_ratio* - Fraction of univariate trees in the ensemble *[0..1]*.
 
 *id_* - deprecated
 
