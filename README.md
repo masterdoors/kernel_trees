@@ -104,15 +104,21 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 __fit(self,X,y)__
 
+Build a forest of trees from the training set (X, y).
+
 *X* - The training input samples (dense or sparse matrix). 
 
 *y* - The target values
 
 __predict(X)__
 
+Predict class for X.
+
 *X* - The input samples. 
 
-*predict_proba(self,X,avg='macro')*
+__predict_proba(self,X,avg='macro')__
+
+Predict class probabilities for *X*.
 
 *X* - The input samples.
 
@@ -163,15 +169,37 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 __fit(self,X,y)__
 
+Build a forest of trees from the training set (X, y).
+
 *X* - The training input samples (dense or sparse matrix). 
 
 *y* - The target values
 
 __predict(self,X)__
 
+Predict class for X.
+
 *X* - The input samples. 
 
 ## Refined Kernel Forest classifier and Regressor
+
+Class __CO2_refined.RefinedForestClassifier__. Refined Kernel Forest classifier.
+
+All methods and parameters are the same as for Kernel Forest, except the __\__init____ has the following additional parameters:
+
+prune_threshold - fraction of leaves to be pruned after the refinement.
+
+pruneC - Regularization parameter of the refinement.
+
+
+Class __CO2_refined.RefinedForestRegressor__. Refined Kernel Forest regressor.
+
+All methods and parameters are the same as for Kernel Forest, except the __\__init____ has the following additional parameters:
+
+prune_threshold - fraction of leaves to be pruned after the refinement.
+
+pruneC - Regularization parameter of the refinement.
+
 
 ## Cascade Forest
 
