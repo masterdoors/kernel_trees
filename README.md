@@ -94,7 +94,7 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 *criteria* - {gini, gain}. The function to measure the quality of a split. 
 
-*spatial_mul*
+*spatial_mul* - deprecated.
 
 *univariate_ratio*.  - Fraction of univariate trees in the ensemble *[0..1]*.
 
@@ -159,7 +159,7 @@ __\__init____(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samp
 
 *criteria* - {mse}. The function to measure the quality of a split (mean squared error is the only option now). 
 
-*spatial_mul*
+*spatial_mul* - deprecated.
 
 *univariate_ratio* - Fraction of univariate trees in the ensemble *[0..1]*.
 
@@ -187,18 +187,18 @@ Class __CO2_refined.RefinedForestClassifier__. Refined Kernel Forest classifier.
 
 All methods and parameters are the same as for Kernel Forest, except the __\__init____ has the following additional parameters:
 
-prune_threshold - fraction of leaves to be pruned after the refinement.
+*prune_threshold* - fraction of leaves to be pruned after the refinement.
 
-pruneC - Regularization parameter of the refinement.
+*pruneC* - Regularization parameter of the refinement.
 
 
 Class __CO2_refined.RefinedForestRegressor__. Refined Kernel Forest regressor.
 
 All methods and parameters are the same as for Kernel Forest, except the __\__init____ has the following additional parameters:
 
-prune_threshold - fraction of leaves to be pruned after the refinement.
+*prune_threshold* - fraction of leaves to be pruned after the refinement.
 
-pruneC - Regularization parameter of the refinement.
+*pruneC* - Regularization parameter of the refinement.
 
 
 ## Cascade Forest
