@@ -56,13 +56,13 @@ pip install git+https://github.com/masterdoors/kernel_trees.git
 # API
 ## Kernel Forest classifier and Regressor
 
-```Class CO2_forest.CO2ForestClassifier``` - Kernel Forest classifier
+Class CO2_forest.CO2ForestClassifier - Kernel Forest classifier
 
 Methods:
-```__init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+__init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,verbose=0)```
+                 gamma=1000.,criteria='gini',spatial_mul=1.0,id_=0,univariate_ratio=0.0,verbose=0)
 
 C - Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive and pretty large comparing to SVM (1000 and greather).
 
@@ -100,27 +100,27 @@ id_
 
 verbose - Enable verbose output. 
 
-```fit(self,X,y)```
+fit(self,X,y)
 
 X - The training input samples (dense or sparse matrix). 
 y - The target values
 
-```predict(X)```
+predict(X)
 
 X - The input samples. 
 
-```predict_proba(self,X,avg='macro')```
+predict_proba(self,X,avg='macro')
 
 X - The input samples.
 
 avg - {macro, None}. Defines if the method should return mean probability.
 
-```Class CO2_forest.CO2ForestRegressor``` - Kernel Forest regressor
+Class CO2_forest.CO2ForestRegressor - Kernel Forest regressor
 
-```_init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
+_init__(self,C, kernel = 'linear', max_depth = None, tol = 0.001, min_samples_split = 2, \
                  dual=True,max_iter=1000000,
                  min_samples_leaf = 1, n_jobs=1, n_estimators = 10,sample_ratio = 1.0,feature_ratio=1.0,\
-                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0)```
+                 gamma=1000.,criteria='mse',spatial_mul=1.0, id_=0,univariate_ratio=0.0, verbose=0)
 
 C - Regularization parameter. The strength of the regularization is inversely proportional to C. Must be strictly positive and pretty large comparing to SVM (1000 and greather).
 
@@ -158,12 +158,12 @@ id_
 
 verbose - Enable verbose output. 
 
-```fit(self,X,y)```
+fit(self,X,y)
 
 X - The training input samples (dense or sparse matrix). 
 y - The target values
 
-```predict(self,X)```
+predict(self,X)
 
 X - The input samples. 
 
