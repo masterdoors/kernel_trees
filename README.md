@@ -4,6 +4,7 @@ Bagging on kernel trees. See: *Devyatkin, D. A., & Grigoriev, O. G. (2022). Rand
 ## Table of Contents:
 - [Dependences](#dependences)
 - [Installation](#installation)
+- [API](#api)
 - [Examples](#examples)
     - [Basic usage](#basic-usage)
     - [Refined Forest](#refined-forest)
