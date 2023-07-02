@@ -1,5 +1,5 @@
-from decision_stamp import *
-from gpu_optimizer import *
+from kernel_trees.decision_stamp import *
+from kernel_trees.GPU.gpu_optimizer import *
 
 from scipy.sparse import csr_matrix
 
