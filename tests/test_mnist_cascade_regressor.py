@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-import CO2_forest as co2f
+from kernel_trees import CO2ForestRegressor
 from kernel_trees import RefinedForestRegressor
 from deepforest import CascadeForestRegressor
 import matplotlib.pyplot as plt
@@ -43,7 +43,7 @@ axes[0].scatter(
 )
 
 
-est = [co2f.CO2ForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=1000000,kernel='linear',\
+est = [CO2ForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=1000000,kernel='linear',\
                                    max_depth=3,n_jobs=10,feature_ratio = 0.5,\
                                    n_estimators=100) for i in range(int(2))]
                                 
