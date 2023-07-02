@@ -1,7 +1,7 @@
-from .CO2_refined import RefinedForestClassifier
-from .CO2_refined import RefinedForestRegressor
-from .GPU_forest import GPUForestClassifier
-from .GPU_forest import GPUForestRegressor
+from .regularization import RefinedForestClassifier
+from .regularization import RefinedForestRegressor
+from .GPU import GPUForestClassifier
+from .GPU import GPUForestRegressor
 from .CO2_forest import CO2ForestRegressor
 from .CO2_forest import CO2ForestClassifier
 
