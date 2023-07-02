@@ -14,7 +14,7 @@ from numpy.random import randint as rint
 import numpy
 
 
-import GPU_forest as co2f
+from kernel_trees import GPUForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
@@ -64,7 +64,7 @@ def objective(trial):
     
     kf = KFold(n_splits=3)
     for _, (train_index, test_index) in enumerate(kf.split(x_sp_t)):
-        trc = co2f.GPUForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+        trc = GPUForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                                    max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
                                    n_estimators=30,\
                                    gamma=g,criteria='gain')        
@@ -84,7 +84,7 @@ g = study.best_trial.params["g"]
 d = study.best_trial.params["d"]
 f = study.best_trial.params["f"]
 
-trc = co2f.GPUForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
+trc = GPUForestClassifier(C=C, dual=False,tol = 0.0000001,max_iter=1000000,kernel='gaussian',\
                            max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,\
                            n_estimators=30,\
                            gamma=g,criteria='gain')        

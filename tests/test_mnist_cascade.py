@@ -10,7 +10,7 @@ from numpy.random import randint as rint
 import numpy
 
 
-import CO2_forest as co2f
+from kernel_trees import CO2ForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
@@ -56,7 +56,7 @@ def objective(trial):
     
     kf = KFold(n_splits=3)
     for _, (train_index, test_index) in enumerate(kf.split(x_train)):
-        est = [co2f.CO2ForestClassifier(C=C, dual=False,tol = 0.0001,max_iter=100000000,kernel='gaussian',\
+        est = [CO2ForestClassifier(C=C, dual=False,tol = 0.0001,max_iter=100000000,kernel='gaussian',\
                                         max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,n_estimators=30,gamma=g,\
                                         criteria='gain') for i in range(int(2))]                            
         model = CascadeForestClassifier(max_layers=3)
@@ -78,7 +78,7 @@ g = study.best_trial.params["g"]
 d = study.best_trial.params["d"]
 f = study.best_trial.params["f"]
 
-est = [co2f.CO2ForestClassifier(C=C, dual=False,tol = 0.0001,max_iter=100000000,kernel='gaussian',\
+est = [CO2ForestClassifier(C=C, dual=False,tol = 0.0001,max_iter=100000000,kernel='gaussian',\
                                 max_depth=d,n_jobs=10,sample_ratio=1.0, feature_ratio = f,n_estimators=30,gamma=g,\
                                 criteria='gain') for i in range(int(2))]                            
 model = CascadeForestClassifier(max_layers=3)

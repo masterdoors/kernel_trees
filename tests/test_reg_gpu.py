@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-import GPU_forest as co2f
+from kernel_trees import GPUForestRegressor
 import matplotlib.pyplot as plt
 
 X = np.sort(5 * np.random.rand(40, 1), axis=0)
@@ -11,7 +11,7 @@ y[::5] += 3 * (0.5 - np.random.rand(8))
 
 rf = RandomForestRegressor(max_depth=4)
 
-krf = co2f.GPUForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=100000,kernel='linear',\
+krf = GPUForestRegressor(C=3000, dual=False,tol = 0.001,max_iter=100000,kernel='linear',\
                                    max_depth=3,n_jobs=10,feature_ratio = 1.0,\
                                    n_estimators=100)
 
