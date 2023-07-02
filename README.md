@@ -203,6 +203,8 @@ All methods and parameters are the same as for Kernel Forest, except the __\__in
 
 ## Cascade Forest
 
+See the documentation here: <a href="https://github.com/masterdoors/kernel_trees/tree/master/sources/cascade">Cascade Forest</a>
+
 <a name="examples"/>
 
 # Examples
