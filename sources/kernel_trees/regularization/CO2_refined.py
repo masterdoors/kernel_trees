@@ -1,4 +1,4 @@
-from CO2_forest import *
+from kernel_trees.CO2_forest import *
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import SGDRegressor
 from sklearn.preprocessing import MinMaxScaler, Normalizer
