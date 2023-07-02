@@ -22,7 +22,7 @@ setup(
     description='Oblique and kernel trees library',
     author='ISA RAS',
     author_email='',
-    packages=[''],
+    packages=['kernel_trees'],
     include_package_data=True,
     zip_safe=False,
     package_dir={'': 'sources'},
