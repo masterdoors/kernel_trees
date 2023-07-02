@@ -1,10 +1,10 @@
 import numpy
-from CO2_tree import *
-from CO2_forest import * 
+from kernel_trees.CO2_tree import *
+from kernel_trees.CO2_forest import * 
 from sklearn.base import ClassifierMixin
 from sklearn.base import RegressorMixin
 
-import GPU_decision_stamp as dst
+import kernel_trees.GPU.GPU_decision_stamp as dst
 
 class GPUTreeClassifier(BaseCO2Tree, ClassifierMixin):
     def __init__(self,C, tol, max_iter=1000,kernel = 'linear', dual = True,max_depth = None, \

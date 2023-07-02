@@ -17,9 +17,9 @@ from sympy.utilities.iterables import multiset_permutations
 from numpy import isnan
 
 
-from sklearn_optimizer import *
+from kernel_trees.sklearn_optimizer import *
 
-from CO2_criteria import *
+from kernel_trees.CO2_criteria import *
 
 
 class BaseDecisionStamp:

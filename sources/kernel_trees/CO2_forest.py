@@ -10,7 +10,7 @@ Created on 27 марта 2016 г.
 
 @author: keen
 '''
-import CO2_tree as co2
+import kernel_trees.CO2_tree as co2
 
 from numpy import argmax
 from numpy import asarray

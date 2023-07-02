@@ -3,7 +3,7 @@ Created on 27 марта 2016 г.
 
 @author: keen
 '''
-import decision_stamp as dst
+import kernel_trees.decision_stamp as dst
 from scipy.sparse import csr_matrix
 from numpy import ndarray
 from numpy import float64
